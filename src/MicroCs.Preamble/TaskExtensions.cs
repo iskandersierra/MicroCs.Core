@@ -15,4 +15,16 @@ public static class TaskExtensions
         Task.WhenAll(tasks);
     
     #endregion [ WhenAll ]
+
+    #region [ WhenAny ]
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<Task<T>> WhenAny<T>(this IEnumerable<Task<T>> tasks) =>
+        Task.WhenAny(tasks);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<Task> WhenAny(this IEnumerable<Task> tasks) =>
+        Task.WhenAny(tasks);
+    
+    #endregion [ WhenAny ]
 }
