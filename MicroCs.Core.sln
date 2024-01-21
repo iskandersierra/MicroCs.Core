@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCs.Preamble.Tests", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCs.Generators", "src\MicroCs.Generators\MicroCs.Generators.csproj", "{2F3AED5A-A4E7-44EC-88FE-188A169177C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCs.Generators.Tests", "test\MicroCs.Generators.Tests\MicroCs.Generators.Tests.csproj", "{8C6DD5F6-5720-4891-80F2-CD94486A495E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{2F3AED5A-A4E7-44EC-88FE-188A169177C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F3AED5A-A4E7-44EC-88FE-188A169177C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F3AED5A-A4E7-44EC-88FE-188A169177C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C6DD5F6-5720-4891-80F2-CD94486A495E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C6DD5F6-5720-4891-80F2-CD94486A495E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C6DD5F6-5720-4891-80F2-CD94486A495E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C6DD5F6-5720-4891-80F2-CD94486A495E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,6 +54,7 @@ Global
 		{54774FBF-0BF0-4635-A087-0F3966706CB7} = {5F8FFF2D-4116-4071-B6A8-7C64A1395F9E}
 		{339041F0-12A4-4BCA-8395-B6A710F7F48C} = {BD159BEE-3279-4A78-BA63-7C5E0BF98810}
 		{2F3AED5A-A4E7-44EC-88FE-188A169177C5} = {5F8FFF2D-4116-4071-B6A8-7C64A1395F9E}
+		{8C6DD5F6-5720-4891-80F2-CD94486A495E} = {BD159BEE-3279-4A78-BA63-7C5E0BF98810}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3274B075-EA34-4485-BBAB-9866FEA84702}

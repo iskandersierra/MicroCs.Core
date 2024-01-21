@@ -13,6 +13,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Aop\assets\ProxyGenerator.Attributes.scriban.cs" />
+    <Compile Remove="Aop\assets\ProxyGenerator.Class.scriban.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Aop\assets\ProxyGenerator.Class.scriban.cs" />
+    <EmbeddedResource Include="Aop\assets\ProxyGenerator.Attributes.scriban.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
