@@ -14,7 +14,7 @@ public class ProxyGeneratorTests
     }
 
     [Fact]
-    public async Task BeforeCall_SyncVoid_NoParam()
+    public async Task BeforeCall()
     {
         await GeneratorTestUtils.Verify<ProxyGenerator>($"{AssetsPath}.BeforeCall.cs");
     }

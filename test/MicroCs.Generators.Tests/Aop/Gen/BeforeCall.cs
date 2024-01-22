@@ -17,7 +17,7 @@ public class LoggingInterceptors
         [InterceptedInstance] IProxyGeneratorInterface instance,
         [InterceptedTarget] Type targetType,
         [InterceptedMember] MethodInfo methodInfo,
-        [InterceptedParameters] object[] parameters)
+        [InterceptedParameters(CouldChange = false)] object[] parameters)
     {
         Console.WriteLine($"BeforeCall: {proxyType} {proxyInstance} {instance} {targetType} {methodInfo} {parameters}");
     }

@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MicroCs.Generators;
 
-internal static class GeneratorUtils
+internal static partial class GeneratorUtils
 {
     public const string MainNamespace = "MicroCs.Generators";
 
@@ -95,8 +95,9 @@ internal static class GeneratorUtils
         attributes
             .Any(attributeSyntax =>
             {
-                if (semanticModel.GetSymbolInfo(attributeSyntax).Symbol
-                    is not IMethodSymbol attrCtorSymbol)
+                var symbolInfo = semanticModel.GetSymbolInfo(attributeSyntax);
+
+                if (symbolInfo.Symbol is not IMethodSymbol attrCtorSymbol)
                     return false;
 
                 if (attrCtorSymbol.ContainingType
@@ -113,8 +114,7 @@ internal static class GeneratorUtils
         string attributeTypeFullName,
         SemanticModel semanticModel,
         SymbolDisplayFormat? format = null) =>
-        syntax.GetAttributes()
-            .HasAttribute(attributeTypeFullName, semanticModel, format);
+        syntax.GetAttributes().HasAttribute(attributeTypeFullName, semanticModel, format);
 
     #endregion [ Attributes ]
 
@@ -134,6 +134,122 @@ internal static class GeneratorUtils
             .Any(e => string.Equals(e, attributeTypeFullName, StringComparison.Ordinal));
 
     #endregion [ Attributes ]
+
+    #region [ Types ]
+
+    public static NamedTypeModel ToNamedTypeModel(
+        this INamedTypeSymbol symbol)
+    {
+        return new NamedTypeModel
+        {
+            Namespace = symbol.ContainingNamespace.ToDisplayString(),
+            FullName = symbol.ToDisplayString(),
+            Name = symbol.Name,
+        };
+    }
+
+    public static NamedTypeModel? ToNamedTypeModel(
+        this ITypeSymbol symbol,
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        switch (symbol)
+        {
+            case INamedTypeSymbol namedTypeSymbol:
+                return namedTypeSymbol.ToNamedTypeModel();
+
+            default:
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        DiagnosticDescriptors.UnexpectedTypeOnSymbol,
+                        symbol.Locations[0],
+                        symbol.ToDisplayString()));
+
+                return null;
+            }
+        }
+    }
+
+    #endregion [ Types ]
+
+    #region [ Members ]
+
+    public static MethodModel? ToMethodModel(
+        this IMethodSymbol symbol,
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        var parameters = symbol.Parameters
+            .Select(p =>
+            {
+                var typeModel = p.Type.ToNamedTypeModel(context, compilation);
+
+                if (typeModel is null) return null;
+
+                return new MethodParameterModel
+                {
+                    Name = p.Name,
+                    Type = typeModel,
+                };
+            })
+            .Where(p => p is not null)
+            .Select(p => p!)
+            .ToList();
+
+        var returnType = symbol.ReturnType.ToNamedTypeModel(context, compilation);
+
+        if (returnType is null || parameters.Count != symbol.Parameters.Length)
+            return null;
+
+        return new MethodModel
+        {
+            Name = symbol.Name,
+            Parameters = parameters,
+            ReturnType = returnType,
+        };
+    }
+
+    public static MemberBaseModel? ToMemberBaseModel(
+        this ISymbol symbol,
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        switch (symbol)
+        {
+            case IMethodSymbol methodSymbol:
+                return methodSymbol.ToMethodModel(context, compilation);
+
+            default:
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        DiagnosticDescriptors.UnexpectedMemberOnSymbol,
+                        symbol.Locations[0],
+                        symbol.ToDisplayString()));
+
+                return null;
+            }
+        }
+    }
+    
+    public static IReadOnlyList<MemberBaseModel>? ExtractMembers(
+        this INamedTypeSymbol symbol,
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        var result = symbol.GetMembers()
+            .Select(m => m.ToMemberBaseModel(context, compilation))
+            .Where(m => m is not null)
+            .Select(m => m!)
+            .ToList();
+
+        if (result.Count != symbol.GetMembers().Length) return null;
+
+        return result;
+    }
+
+    #endregion [ Members ]
 
     #endregion [ Semantics ]
 }

@@ -22,27 +22,42 @@ partial class LoggingProxyGeneratorClass
 
     //private static readonly global::System.Type IProxyGeneratorInterface_TargetType_Cache = typeof(global::MicroCs.Generators.Tests.Aop.BeforeCall.IProxyGeneratorInterface);
 
-    private const string Method_0_Name = nameof(global::MicroCs.Generators.Tests.Aop.BeforeCall.IProxyGeneratorInterface.MyMethod);
+    //private const string MyMethod_0_Name = nameof(global::MicroCs.Generators.Tests.Aop.BeforeCall.IProxyGeneratorInterface.MyMethod);
 
-    private static readonly global::System.Reflection.MethodInfo Method_0_Cache =
-        IProxyGeneratorInterface_TargetType_Cache.GetMethod(
-            name: Method_0_Name,
-            bindingAttr: global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance,
-            binder: null,
-            genericParameterCount: 0,
-            callConvention: global::System.Reflection.CallingConventions.Any,
-            types: Array.Empty<global::System.Type>(),
-            modifiers: Array.Empty<global::System.Reflection.ParameterModifier>())!;
+    //private static readonly global::System.Reflection.MethodInfo MyMethod_0_Cache =
+    //    IProxyGeneratorInterface_TargetType_Cache!.GetMethod(
+    //        name: MyMethod_0_Name,
+    //        bindingAttr: global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance,
+    //        binder: null,
+    //        genericParameterCount: 0,
+    //        callConvention: global::System.Reflection.CallingConventions.Any,
+    //        types: Array.Empty<global::System.Type>(),
+    //        modifiers: null)!;
 
-    void global::MicroCs.Generators.Tests.Aop.BeforeCall.IProxyGeneratorInterface.MyMethod()
+    //void global::MicroCs.Generators.Tests.Aop.BeforeCall.IProxyGeneratorInterface.MyMethod()
+    //{
+    //    interceptors.BeforeCall(
+    //        proxyType: ProxyType_Cache,
+    //        proxyInstance: this,
+    //        instance: iproxygeneratorinterface,
+    //        targetType: IProxyGeneratorInterface_TargetType_Cache,
+    //        methodInfo: MyMethod_0_Cache,
+    //        Array.Empty<object>());
+
+    //    iproxygeneratorinterface.MyMethod();
+    //}
+
+    public void MyMethod_Sample()
     {
+        var parameters = Array.Empty<object>();
+
         interceptors.BeforeCall(
             proxyType: ProxyType_Cache,
             proxyInstance: this,
             instance: iproxygeneratorinterface,
             targetType: IProxyGeneratorInterface_TargetType_Cache,
-            methodInfo: Method_0_Cache,
-            Array.Empty<object>());
+            methodInfo: MyMethod_0_Cache,
+            parameters: parameters);
 
         iproxygeneratorinterface.MyMethod();
     }

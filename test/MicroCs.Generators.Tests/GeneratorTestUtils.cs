@@ -85,16 +85,19 @@ internal class GeneratorTestUtils
 
     private static IEnumerable<MetadataReference> GetReferences()
     {
-        string dotNetAssemblyPath = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+        string dotNet = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+        string locals = Path.GetDirectoryName(typeof(GeneratorTestUtils).Assembly.Location)!;
 
         return new[]
             {
-                "mscorlib.dll",
-                "System.dll",
-                "System.Core.dll",
-                "System.Runtime.dll",
-                "System.Private.CoreLib.dll",
+                (folder: dotNet, name: "mscorlib.dll"),
+                (folder: dotNet, name: "System.dll"),
+                (folder: dotNet, name: "System.Core.dll"),
+                (folder: dotNet, name: "System.Runtime.dll"),
+                (folder: dotNet, name: "System.Private.CoreLib.dll"),
+
+                (folder: locals, name: "MicroCs.Generators.Annotations.dll"),
             }
-            .Select(a => MetadataReference.CreateFromFile(Path.Combine(dotNetAssemblyPath, a)));
+            .Select(a => MetadataReference.CreateFromFile(Path.Combine(a.folder, a.name)));
     }
 }

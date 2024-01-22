@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -58,7 +59,8 @@ internal static class ProxyGeneratorUtils
             .CreateSyntaxProvider(
                 PartialClassWithBaseTypesAndAttributes,
                 HasGenerateProxyAttribute)
-            .Where(e => e is not null);
+            .Where(e => e is not null)
+            .Select((e, _) => e!);
 
         context.RegisterSourceOutput(
             context.CompilationProvider.Combine(classes.Collect()),
@@ -89,9 +91,9 @@ internal static class ProxyGeneratorUtils
 
     private static void GenerateProxyClasses(
         SourceProductionContext context,
-        (Compilation compilation, ImmutableArray<ClassDeclarationSyntax?> classes) data)
+        (Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes) data)
     {
-        var models = ExtractClassModels(context, data.compilation, data.classes);
+        var models = data.classes.ExtractClassModels(context, data.compilation);
 
         for (int i = 0; i < models.Count; i++)
         {
@@ -104,21 +106,21 @@ internal static class ProxyGeneratorUtils
     }
 
     private static IReadOnlyList<ProxyGeneratorClassModel> ExtractClassModels(
+        this ImmutableArray<ClassDeclarationSyntax> classes,
         SourceProductionContext context,
-        Compilation compilation,
-        ImmutableArray<ClassDeclarationSyntax?> classes)
+        Compilation compilation)
     {
         return classes
-            .Select(classSyntax => ExtractClassModel(context, compilation, classSyntax))
+            .Select(classSyntax => classSyntax.ExtractClassModel(context, compilation))
             .Where(model => model is not null)
             .Select(model => model!)
             .ToArray();
     }
 
     private static ProxyGeneratorClassModel? ExtractClassModel(
+        this ClassDeclarationSyntax classSyntax,
         SourceProductionContext context,
-        Compilation compilation,
-        ClassDeclarationSyntax classSyntax)
+        Compilation compilation)
     {
         var semanticModel = compilation.GetSemanticModel(classSyntax.SyntaxTree);
 
@@ -129,7 +131,7 @@ internal static class ProxyGeneratorUtils
         var @namespace = classSymbol.ContainingNamespace?.ToDisplayString();
 
         var interfaces = classSymbol.AllInterfaces
-            .Select(interfaceSymbol => ExtractInterfaceModel(context, compilation, interfaceSymbol))
+            .Select(interfaceSymbol => interfaceSymbol.ExtractInterfaceModel(context, compilation))
             .Where(model => model is not null)
             .Select(model => model!)
             .ToArray();
@@ -144,7 +146,7 @@ internal static class ProxyGeneratorUtils
             return null;
         }
 
-        var interceptor = ExtractInterceptorModel(context, compilation, classSymbol);
+        var interceptor = classSymbol.ExtractInterceptorModel(context, compilation);
 
         if (interceptor is null) return null;
 
@@ -158,10 +160,14 @@ internal static class ProxyGeneratorUtils
     }
 
     private static ProxyGeneratorInterfaceModel? ExtractInterfaceModel(
+        this INamedTypeSymbol interfaceSymbol,
         SourceProductionContext context,
-        Compilation compilation,
-        INamedTypeSymbol interfaceSymbol)
+        Compilation compilation)
     {
+        var members = interfaceSymbol.ExtractMembers(context, compilation);
+
+        if (members is null) return null;
+
         return new ProxyGeneratorInterfaceModel
         {
             ParameterName = interfaceSymbol.Name.ToLowerInvariant(),
@@ -169,14 +175,15 @@ internal static class ProxyGeneratorUtils
             {
                 FullName = interfaceSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 Name = interfaceSymbol.Name,
+                Members = members,
             },
         };
     }
 
     private static ProxyGeneratorInterceptorModel? ExtractInterceptorModel(
+        this INamedTypeSymbol classSymbol,
         SourceProductionContext context,
-        Compilation compilation,
-        INamedTypeSymbol classSymbol)
+        Compilation compilation)
     {
         var interceptorFields = classSymbol.GetMembers()
             .OfType<IFieldSymbol>()
