@@ -41,7 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MicroCs.Generators\MicroCs.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+    <!--<ProjectReference Include="..\..\src\MicroCs.Generators\MicroCs.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />-->
+    <ProjectReference Include="..\..\src\MicroCs.Generators\MicroCs.Generators.csproj" />
   </ItemGroup>
 
 </Project>

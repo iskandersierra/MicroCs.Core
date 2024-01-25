@@ -1,6 +1,6 @@
 ﻿namespace MicroCs.Generators.Aop;
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
-public sealed class BeforeInterceptorAttribute : Attribute
+public sealed class InterceptBeforeAttribute : Attribute
 {
 }

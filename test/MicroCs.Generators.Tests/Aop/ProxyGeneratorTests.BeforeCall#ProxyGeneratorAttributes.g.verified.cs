@@ -4,7 +4,7 @@
 #nullable enable
 
 namespace MicroCs.Generators.Aop
-{
+{   // OK
     [global::System.AttributeUsage(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     internal sealed class GenerateProxyAttribute : global::System.Attribute
     {

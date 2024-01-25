@@ -69,8 +69,34 @@ partial class {{Name}}
 
     {{method.ReturnType.FullName}} {{interf.InterfaceType.FullName}}.{{method.Name}}()
     {
-        {{ if method.ReturnType.FullName != "void" }}return {{ end -}}
-        {{interf.ParameterName}}.{{method.Name}}();
+        // var state = interceptor.BeforeCall(...);
+        {{~ if Interceptor.InterceptorData.HasBeforeCall ~}}
+        {{ if Interceptor.InterceptorData.HasState }}var state = {{ end -}}
+        {{Interceptor.ParameterName}}.{{Interceptor.InterceptorData.BeforeCall.Name}}(
+        );
+        {{~ end ~}}
+
+        try
+        {
+            {{ if method.ReturnType.FullName != "void" }}var result = {{ end -}}
+            {{interf.ParameterName}}.{{method.Name}}();
+
+            // interceptor.AfterSuccessCall(state, result?, ...);
+
+            {{~ if method.ReturnType.FullName != "void" ~}}
+            return result;
+            {{~ end ~}}
+        }
+        catch (Exception exception)
+        {
+            // interceptor.AfterFailedCall(state, exception...);
+
+            throw;
+        }
+        finally
+        {
+            // interceptor.AfterCall(state, ...);
+        }
     }
 
     #endregion [ {{method.Name}} ]

@@ -29,5 +29,13 @@ partial class AopGeneratorUtils
             category: "MicroCs.Generators.Aop",
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor GeneratedProxyInterceptorIsNotNamedType = new(
+            id: "MCAOP0004",
+            title: "Generated proxy interceptor is not named type",
+            messageFormat: "Generated proxy interceptor {0} is not named type",
+            category: "MicroCs.Generators.Aop",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
     }
 }

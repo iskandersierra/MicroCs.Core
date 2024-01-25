@@ -14,13 +14,5 @@ partial class GeneratorUtils
             category: "MicroCs.Generators",
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
-
-        public static readonly DiagnosticDescriptor UnexpectedMemberOnSymbol = new(
-            id: "MC0002",
-            title: "Unexpected member on symbol",
-            messageFormat: "Unexpected member on symbol {0}",
-            category: "MicroCs.Generators",
-            DiagnosticSeverity.Error,
-            isEnabledByDefault: true);
     }
 }

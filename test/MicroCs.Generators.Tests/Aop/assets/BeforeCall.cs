@@ -13,7 +13,7 @@ public interface IProxyGeneratorInterface
 public class LoggingInterceptors
 {
     [BeforeInterceptor]
-    public void BeforeCall(
+    public Data BeforeCall(
         [InterceptedProxy] Type proxyType,
         [InterceptedProxyInstance] object proxyInstance,
         [InterceptedInstance] IProxyGeneratorInterface instance,
@@ -23,6 +23,8 @@ public class LoggingInterceptors
     {
         Console.WriteLine($"BeforeCall: {proxyType} {proxyInstance} {instance} {targetType} {methodInfo} {parameters}");
     }
+
+    public struct Data(long StartTimestamp);
 }
 
 [GenerateProxy]
