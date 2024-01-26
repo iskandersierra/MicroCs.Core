@@ -1,12 +1,11 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Text;
+using System.Collections.Immutable;
+using System.Reflection.Metadata;
+using System.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace MicroCs.Generators.Aop;
@@ -59,13 +58,13 @@ internal static class ProxyGeneratorUtils
         builder.AppendLine(
             """
             {   // OK
-                [global::System.AttributeUsage(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-                internal sealed class GenerateProxyAttribute : global::System.Attribute
+                [System.AttributeUsage(System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+                internal sealed class GenerateProxyAttribute : System.Attribute
                 {
                 }
             
-                [global::System.AttributeUsage(global::System.AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-                internal sealed class InterceptorAttribute : global::System.Attribute
+                [System.AttributeUsage(System.AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+                internal sealed class InterceptorAttribute : System.Attribute
                 {
                 }
             }
@@ -264,28 +263,28 @@ internal static class ProxyGeneratorUtils
             .Where(field => field.HasAttribute(InterceptorAttributeFullName))
             .ToArray();
 
-        if (interceptorFields.Length == 0)
+        switch (interceptorFields.Length)
         {
-            context.ReportDiagnostic(
-                Diagnostic.Create(
-                    AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasNoInterceptor,
-                    classSymbol.Locations[0],
-                    classSymbol.Name));
-            return false;
-        }
+            case 0:
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasNoInterceptor,
+                        classSymbol.Locations[0],
+                        classSymbol.Name));
+                return false;
 
-        if (interceptorFields.Length > 1)
-        {
-            context.ReportDiagnostic(
-                Diagnostic.Create(
-                    AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasMultipleInterceptors,
-                    interceptorFields[1].Locations[0],
-                    classSymbol.Name));
-            return false;
-        }
+            case > 1:
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasMultipleInterceptors,
+                        interceptorFields[1].Locations[0],
+                        classSymbol.Name));
+                return false;
 
-        interceptorField = interceptorFields[0];
-        return true;
+            default:
+                interceptorField = interceptorFields[0];
+                return true;
+        }
     }
 
     private static ProxyBeforeCallModel? ExtractBeforeCall(
@@ -293,11 +292,158 @@ internal static class ProxyGeneratorUtils
         SourceProductionContext context,
         Compilation compilation)
     {
-        return null;
+        var found = type.Methods
+            .Select(m => (
+                method: m,
+                attr: m.Attributes.FirstOrDefault(a => a.Type.FullName == typeof(InterceptBeforeAttribute).FullName)))
+            .FirstOrDefault(m => m.attr is not null);
+
+        if (found.attr is not { } attr) return null;
+
+        var parameters = ExtractCallParameters(found.method, context, compilation);
+
         return new ProxyBeforeCallModel()
         {
-            Method = type.Methods.First(),
+            Method = found.method,
+            Parameters = parameters,
         };
+    }
+
+    private static IReadOnlyList<ProxyInterceptorCallParameterModel> ExtractCallParameters(
+        MethodModel method,
+        SourceProductionContext context,
+        Compilation compilation)
+    {
+        return method.Parameters
+            .Select(parameter =>
+            {
+                var attributes = parameter.Symbol.ExtractAttributes(context, compilation);
+
+                var hasInterceptedException = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedExceptionAttribute).FullName!);
+
+                var hasInterceptedInstance = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedInstanceAttribute).FullName!);
+
+                var hasInterceptedMember = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedMemberAttribute).FullName!);
+
+                var interceptedParameter = attributes
+                    .Where(a => a.Type.FullName == typeof(InterceptedParameterAttribute).FullName!)
+                    .Select(a => new ProxyInterceptorInterceptedParameterAttributeModel
+                    {
+                        Position = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Position))
+                            .Select(na => na.Value.Value is int position ? position : default(int?))
+                            .FirstOrDefault(),
+
+                        Name = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Name))
+                            .Select(na => na.Value.Value is string name ? name : default(string?))
+                            .FirstOrDefault(),
+
+                        TypeName = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeName))
+                            .Select(na => na.Value.Value is string typeName ? typeName : default(string?))
+                            .FirstOrDefault(),
+
+                        TypeNamespace = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeNamespace))
+                            .Select(na => na.Value.Value is string typeNamespace ? typeNamespace : default(string?))
+                            .FirstOrDefault(),
+
+                        TypeFullName = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeFullName))
+                            .Select(na => na.Value.Value is string typeFullName ? typeFullName : default(string?))
+                            .FirstOrDefault(),
+
+                        Type = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Type))
+                            .Select(na => na.Value.Value is INamedTypeSymbol type ? type.ToNamedTypeModel(context, compilation) : null)
+                            .FirstOrDefault(),
+
+                        Predicate = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Predicate))
+                            .Select(na => na.Value.Value is string predicate ? predicate : default(string?))
+                            .FirstOrDefault(),
+                    })
+                    .FirstOrDefault();
+
+                var interceptedParameters = attributes
+                    .Where(a => a.Type.FullName == typeof(InterceptedParametersAttribute).FullName!)
+                    .Select(a => new ProxyInterceptorInterceptedParametersAttributeModel
+                    {
+                        AllowChanges = a.Data.NamedArguments
+                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParametersAttributeModel.AllowChanges))
+                            .Select(na => na.Value.Value is true)
+                            .FirstOrDefault(),
+                    })
+                    .FirstOrDefault();
+
+                var hasInterceptedProxyInstance = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedProxyInstanceAttribute).FullName!);
+
+                var hasInterceptedProxyType = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedProxyTypeAttribute).FullName!);
+
+                var hasInterceptedResult = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedResultAttribute).FullName!);
+
+                var hasInterceptedState = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedStateAttribute).FullName!);
+
+                var hasInterceptedTarget = attributes
+                    .Any(a => a.Type.FullName == typeof(InterceptedTargetTypeAttribute).FullName!);
+
+                var activeAttributes = new[]
+                {
+                    hasInterceptedException ? nameof(InterceptedExceptionAttribute) : null,
+                    hasInterceptedInstance ? nameof(InterceptedInstanceAttribute) : null,
+                    hasInterceptedMember ? nameof(InterceptedMemberAttribute) : null,
+                    interceptedParameter is not null ? nameof(InterceptedParameterAttribute) : null,
+                    interceptedParameters is not null ? nameof(InterceptedParametersAttribute) : null,
+                    hasInterceptedProxyInstance ? nameof(InterceptedProxyInstanceAttribute) : null,
+                    hasInterceptedProxyType ? nameof(InterceptedProxyTypeAttribute) : null,
+                    hasInterceptedResult ? nameof(InterceptedResultAttribute) : null,
+                    hasInterceptedState ? nameof(InterceptedStateAttribute) : null,
+                    hasInterceptedTarget ? nameof(InterceptedTargetTypeAttribute) : null,
+                }.Where(e => e is not null).ToArray();
+
+                if (activeAttributes.Length > 1)
+                {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(
+                            AopGeneratorUtils.DiagnosticDescriptors.MultipleInterceptionAttributes,
+                            parameter.Symbol.Locations[0],
+                            parameter.Symbol.Name,
+                            string.Join(", ", activeAttributes)));
+                }
+
+                if (activeAttributes.Length == 0)
+                {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(
+                            AopGeneratorUtils.DiagnosticDescriptors.NoInterceptionAttributes,
+                            parameter.Symbol.Locations[0],
+                            parameter.Symbol.Name));
+                }
+
+                return new ProxyInterceptorCallParameterModel
+                {
+                    Parameter = parameter,
+                    InterceptedException = hasInterceptedException ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedInstance = hasInterceptedInstance ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedMember = hasInterceptedMember ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedParameter = interceptedParameter,
+                    InterceptedParameters = interceptedParameters,
+                    InterceptedProxyInstance = hasInterceptedProxyInstance ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedProxyType = hasInterceptedProxyType ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedResult = hasInterceptedResult ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedState = hasInterceptedState ? ProxyInterceptorAttributeModel.Default : null,
+                    InterceptedTargetType = hasInterceptedTarget ? ProxyInterceptorAttributeModel.Default : null,
+                };
+            })
+            .ToArray();
     }
 
     #endregion [ Extract ]
@@ -316,7 +462,7 @@ internal static class ProxyGeneratorUtils
     ///
     /// partial class $Name
     /// {
-    ///     private static readonly global::System.Type ProxyType_Cache;
+    ///     private static readonly System.Type ProxyType_Cache;
     ///
     ///     $InstanceConstructor
     ///
@@ -346,7 +492,7 @@ internal static class ProxyGeneratorUtils
         {
             if (proxyModel.HasNamespace)
                 return TokenList(Token(SyntaxKind.PartialKeyword));
-            
+
             return TokenList(Token(
                 GeneratorUtils.CreateAutoGeneratedHeaders(),
                 SyntaxKind.PartialKeyword,
@@ -366,7 +512,7 @@ internal static class ProxyGeneratorUtils
                         SyntaxKind.NamespaceKeyword,
                         TriviaList()))
                     .WithMembers(SingletonList<MemberDeclarationSyntax>(GetProxyClassDeclaration()));
-            
+
             return GetProxyClassDeclaration();
         }
 
@@ -383,10 +529,16 @@ internal static class ProxyGeneratorUtils
 
         IEnumerable<MemberDeclarationSyntax> GetProxyClassMembers()
         {
+            if (proxyModel.ShouldGenerateProxyTypeName)
+            {
+                // private const string ProxyType_Name = nameof($Name);
+                yield return ParseMemberDeclaration($"private const string {proxyModel.ProxyTypeNameName} = nameof({proxyModel.Name});")!;
+            }
+
             if (proxyModel.ShouldGenerateProxyTypeCache)
             {
-                // private static readonly global::System.Type ProxyType_Cache;
-                yield return ParseMemberDeclaration($"private static readonly global::System.Type {proxyModel.ProxyTypeCacheName};")!;
+                // private static readonly System.Type ProxyType_Cache;
+                yield return ParseMemberDeclaration($"private static readonly System.Type {proxyModel.ProxyTypeCacheName};")!;
             }
 
             yield return GenerateInstanceConstructor(proxyModel);
@@ -491,11 +643,11 @@ internal static class ProxyGeneratorUtils
             // $MethodCacheName =
             //      IProxyGeneratorInterface_TargetType_Cache!.GetMethod(
             //          name: MyMethod_0_Name,
-            //          bindingAttr: global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance,
+            //          bindingAttr: System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
             //          binder: null,
             //          genericParameterCount: 0,
-            //          callConvention: global::System.Reflection.CallingConventions.Any,
-            //          types: new global::System.Type[]
+            //          callConvention: System.Reflection.CallingConventions.Any,
+            //          types: new System.Type[]
             //          {
             //              typeof(string),
             //              typeof(int),
@@ -520,8 +672,8 @@ internal static class ProxyGeneratorUtils
                 yield return Argument(IdentifierName(method.MethodNameConstName))
                     .WithNameColon(NameColon(IdentifierName("name")));
 
-                // bindingAttr: global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance,
-                yield return Argument(ParseExpression("global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance"))
+                // bindingAttr: System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                yield return Argument(ParseExpression("System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance"))
                     .WithNameColon(NameColon(IdentifierName("bindingAttr")));
 
                 // binder: null,
@@ -532,16 +684,16 @@ internal static class ProxyGeneratorUtils
                 yield return Argument(LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(0)))
                     .WithNameColon(NameColon(IdentifierName("genericParameterCount")));
 
-                // callConvention: global::System.Reflection.CallingConventions.Any,
-                yield return Argument(ParseExpression("global::System.Reflection.CallingConventions.Any"))
+                // callConvention: System.Reflection.CallingConventions.Any,
+                yield return Argument(ParseExpression("System.Reflection.CallingConventions.Any"))
                     .WithNameColon(NameColon(IdentifierName("callConvention")));
 
-                // types: new global::System.Type[] {...} -or- types: global::System.Array.Empty<global::System.Type>(),
-                if (method.Method.Parameters is {Count: > 0})
+                // types: new System.Type[] {...} -or- types: System.Array.Empty<System.Type>(),
+                if (method.Method.Parameters is { Count: > 0 })
                 {
                     yield return Argument(
                             ArrayCreationExpression(
-                                    ArrayType(ParseTypeName("global::System.Type"))
+                                    ArrayType(ParseTypeName("System.Type"))
                                         .WithRankSpecifiers(SingletonList(
                                             ArrayRankSpecifier(SingletonSeparatedList<ExpressionSyntax>(
                                                 OmittedArraySizeExpression())))))
@@ -553,7 +705,7 @@ internal static class ProxyGeneratorUtils
                 }
                 else
                 {
-                    yield return Argument(ParseExpression("global::System.Array.Empty<global::System.Type>()"))
+                    yield return Argument(ParseExpression("System.Array.Empty<System.Type>()"))
                         .WithNameColon(NameColon(IdentifierName("types")));
                 }
 
@@ -566,7 +718,12 @@ internal static class ProxyGeneratorUtils
                 {
                     foreach (var parameter in method.Method.Parameters)
                     {
-                        yield return ParseExpression($"typeof({parameter.Type.FullName})");
+                        var fullName = parameter.Type.FullName;
+                        if (fullName.EndsWith("?"))
+                        {
+                            fullName = fullName.Substring(0, fullName.Length - 1);
+                        }
+                        yield return ParseExpression($"typeof({fullName})");
                     }
                 }
             }
@@ -580,12 +737,268 @@ internal static class ProxyGeneratorUtils
         // private readonly $InterfaceFullName $InterfaceParameterName;
         yield return ParseMemberDeclaration($"private readonly {@interface.Type.FullName} {@interface.ParameterName};")!;
 
+        if (@interface.ShouldGenerateTargetTypeName)
+        {
+            // private const string $InterfaceName_TargetType_Name = nameof($InterfaceFullName);
+            yield return ParseMemberDeclaration($"private const string {@interface.TargetTypeNameName} = nameof({@interface.Type.FullName});")!;
+        }
+
         if (@interface.ShouldGenerateTargetTypeCache)
         {
-            // private static readonly global::System.Type IProxyGeneratorInterface_TargetType_Cache;
-            yield return ParseMemberDeclaration($"private static readonly global::System.Type {@interface.TargetTypeCacheName};")!;
+            // private static readonly System.Type IProxyGeneratorInterface_TargetType_Cache;
+            yield return ParseMemberDeclaration($"private static readonly System.Type {@interface.TargetTypeCacheName};")!;
+        }
+
+        foreach (var method in @interface.Methods)
+        {
+            if (method.Method.ShouldGenerateMethodName)
+            {
+                // private const string $MethodName_$MethodIndex_Name = nameof($InterfaceFullName.$MethodName);
+                yield return ParseMemberDeclaration($"private const string {method.MethodNameConstName} = nameof({@interface.Type.FullName}.{method.Method.Name});")!;
+            }
+
+            if (method.Method.ShouldGenerateMethodCache)
+            {
+                // private static readonly System.Reflection.MethodInfo MyMethod_0_Cache;
+                yield return ParseMemberDeclaration($"private static readonly System.Reflection.MethodInfo {method.MethodCacheName};")!;
+            }
+
+            yield return GenerateInterfaceMethodImplementation(proxyModel, @interface, method);
         }
     }
+
+    // $ReturnType $InterfaceFullName.$MethodName($Parameters) { $Interception }
+    private static MemberDeclarationSyntax GenerateInterfaceMethodImplementation(
+        ProxyGeneratorClassModel proxyModel,
+        ProxyGeneratorInterfaceModel @interface,
+        ProxyGeneratorInterfaceMethodModel method)
+    {
+        var methodDeclaration = MethodDeclaration(
+                ParseTypeName(method.Method.ReturnType.FullName),
+                Identifier(method.Method.Name))
+            .WithExplicitInterfaceSpecifier(ExplicitInterfaceSpecifier(
+                ParseName(@interface.Type.FullName)))
+            .WithParameterList(ParameterList(SeparatedList(GetParameters())))
+            .WithBody(Block(GetStatements()));
+
+        if (method.IsAsync)
+            methodDeclaration = methodDeclaration
+                .WithModifiers(TokenList(Token(SyntaxKind.AsyncKeyword)));
+
+        return methodDeclaration;
+
+
+        IEnumerable<ParameterSyntax> GetParameters()
+        {
+            foreach (var parameter in method.Method.Parameters)
+            {
+                yield return Parameter(Identifier(parameter.Name))
+                    .WithType(ParseTypeName(parameter.Type.FullName));
+            }
+        }
+
+        IEnumerable<StatementSyntax> GetStatements()
+        {
+            if (proxyModel.Interceptor.BeforeCall is { } beforeCall)
+            {
+                foreach (var statement in GenerateBeforeCall(beforeCall))
+                {
+                    yield return statement;
+                }
+            }
+
+            if (proxyModel.Interceptor.HasAfterCalls)
+            {
+                // TODO: Use try/catch/finally to implement after-call interceptions
+            }
+            else
+            {
+                if (method.ResultType.IsVoid)
+                {
+                    // [await ]this.$InterfaceParameterName.$MethodName($Parameters);
+                    yield return ExpressionStatement(GetOriginalMethodCall());
+                }
+                else
+                {
+                    // return [await ]this.$InterfaceParameterName.$MethodName($Parameters);
+                    yield return ReturnStatement(GetOriginalMethodCall());
+                }
+            }
+        }
+
+        IEnumerable<StatementSyntax> GenerateBeforeCall(ProxyBeforeCallModel beforeCall)
+        {
+            // $InterceptorParameterName.BeforeCall(
+            //     proxyType: ProxyType_Cache,
+            //     proxyTypeName: ProxyType_Name,
+            //     proxyInstance: this,
+            //     instance: $InterfaceParameterName,
+            //     targetType: $InterfaceName_TargetType_Name,
+            //     targetTypeName: $InterfaceName_TargetType_Cache,
+            //     methodInfo: MyMethod_0_Cache,
+            //     methodName: MyMethod_0_Name,
+            //     parameters: new object[] { $Parameters });
+
+            if (beforeCall.HasParametersArgument)
+            {
+                // var parameters = new object[] { $Parameters };
+                yield return LocalDeclarationStatement(
+                    VariableDeclaration(ParseTypeName("var"))
+                        .WithVariables(SingletonSeparatedList(
+                            VariableDeclarator(Identifier("parameters"))
+                                .WithInitializer(
+                                    EqualsValueClause(
+                                        ArrayCreationExpression(
+                                                ArrayType(ParseTypeName("object?"))
+                                                    .WithRankSpecifiers(SingletonList(
+                                                        ArrayRankSpecifier(SingletonSeparatedList<ExpressionSyntax>(
+                                                            OmittedArraySizeExpression())))))
+                                            .WithInitializer(
+                                                InitializerExpression(
+                                                    SyntaxKind.ArrayInitializerExpression,
+                                                    SeparatedList(method.Method.Parameters
+                                                        .Select(p => ParseExpression(p.Name))))))))));
+            }
+
+            var callExpression = InvocationExpression(
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        IdentifierName(proxyModel.Interceptor.ParameterName),
+                        IdentifierName(beforeCall.Name)))
+                .WithArgumentList(ArgumentList(SeparatedList(
+                    GetInterceptorArguments(beforeCall.Parameters))));
+
+            if (proxyModel.Interceptor.HasState)
+            {
+                yield return LocalDeclarationStatement(
+                    VariableDeclaration(ParseTypeName("var"))
+                        .WithVariables(SingletonSeparatedList(
+                            VariableDeclarator(Identifier("state"))
+                                .WithInitializer(
+                                    EqualsValueClause(callExpression)))));
+            }
+
+            yield return ExpressionStatement(callExpression);
+        }
+
+        ExpressionSyntax GetOriginalMethodCall()
+        {
+            ExpressionSyntax call = InvocationExpression(
+                MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    IdentifierName(@interface.ParameterName),
+                    IdentifierName(method.Method.Name)))
+                .WithArgumentList(ArgumentList(SeparatedList(
+                    GetInterceptedArgumentList())));
+
+            if (method.IsAsync)
+            {
+                call = AwaitExpression(call);
+            }
+
+            return call;
+        }
+
+        IEnumerable<ArgumentSyntax> GetInterceptedArgumentList()
+        {
+            // TODO: If parameters could change, take the values from parameters[i] instead
+            if (proxyModel.Interceptor.BeforeCall?.ParametersArgument?.InterceptedParameters?.AllowChanges == true)
+            {
+                for (int i = 0; i < method.Method.Parameters.Count; i++)
+                {
+                    var parameter = method.Method.Parameters[i];
+                    yield return Argument(ParseExpression($"({parameter.Type.FullName})parameters[{i}]"));
+                }
+            }
+            else
+            {
+                foreach (var parameter in method.Method.Parameters)
+                {
+                    yield return Argument(IdentifierName(parameter.Name));
+                }
+            }
+        }
+
+        IEnumerable<ArgumentSyntax> GetInterceptorArguments(
+            IReadOnlyList<ProxyInterceptorCallParameterModel> parameters)
+        {
+            foreach (var parameter in parameters)
+            {
+                yield return Argument(GetParameterValue(parameter))
+                    .WithNameColon(NameColon(IdentifierName(parameter.Name)));
+            }
+
+            ExpressionSyntax GetParameterValue(ProxyInterceptorCallParameterModel parameter)
+            {
+                if (parameter.InterceptedProxyType is not null)
+                {
+                    if (parameter.Type.FullName == "string")
+                    {
+                        // ProxyType_Name
+                        return ParseExpression(@$"{proxyModel.ProxyTypeNameName}");
+                    }
+
+                    if (parameter.Type.FullName == typeof(Type).FullName)
+                    {
+                        // ProxyType_Cache
+                        return ParseExpression(@$"{proxyModel.ProxyTypeCacheName}");
+                    }
+                }
+
+                if (parameter.InterceptedProxyInstance is not null)
+                {
+                    return ParseExpression("this");
+                }
+
+                if (parameter.InterceptedInstance is not null)
+                {
+                    // $InterfaceParameterName
+                    return ParseExpression(@$"{@interface.ParameterName}");
+                }
+
+                if (parameter.InterceptedTargetType is not null)
+                {
+                    if (parameter.Type.FullName == "string")
+                    {
+                        // $InterfaceName_TargetType_Name
+                        return ParseExpression(@$"{@interface.TargetTypeNameName}");
+                    }
+
+                    if (parameter.Type.FullName == typeof(Type).FullName)
+                    {
+                        // $InterfaceName_TargetType_Cache
+                        return ParseExpression(@$"{@interface.TargetTypeCacheName}");
+                    }
+                }
+
+                if (parameter.InterceptedMember is not null)
+                {
+                    if (parameter.Type.FullName == "System.Reflection.MethodInfo")
+                    {
+                        // MyMethod_0_Cache
+                        return ParseExpression(@$"{method.MethodCacheName}");
+                    }
+
+                    if (parameter.Type.FullName == "string")
+                    {
+                        // MyMethod_0_Name
+                        return ParseExpression(@$"{method.MethodNameConstName}");
+                    }
+                }
+
+                if (parameter.InterceptedParameters is not null)
+                {
+                    // parameters
+                    return ParseExpression("parameters");
+                }
+
+                // default!
+                return LiteralExpression(SyntaxKind.DefaultLiteralExpression);
+            }
+        }
+    }
+
+
 
     #endregion [ Generate ]
 

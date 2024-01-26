@@ -6,17 +6,20 @@ namespace MicroCs.Generators.Lib.Samples.BeforeCall;
 public class LoggingInterceptors
 {
     [InterceptBefore()]
-    public void BeforeCall(
-        [InterceptedProxy] Type proxyType,
-        [InterceptedProxy] string proxyTypeName,
+    public Data BeforeCall(
+        [InterceptedProxyType] Type proxyType,
+        [InterceptedProxyType] string proxyTypeName,
         [InterceptedProxyInstance] object proxyInstance,
         [InterceptedInstance] IProxyGeneratorInterface instance,
-        [InterceptedTarget] Type targetType,
-        [InterceptedTarget] string targetTypeName,
+        [InterceptedTargetType] Type targetType,
+        [InterceptedTargetType] string targetTypeName,
         [InterceptedMember] MethodInfo methodInfo,
         [InterceptedMember] string methodName,
-        [InterceptedParameters] object[] parameters)
+        [InterceptedParameters] object?[] parameters,
+        [InterceptedParameter(Type = typeof(string))] string? stringParameter)
     {
-        Console.WriteLine($"BeforeCall: {proxyType} {proxyInstance} {instance} {targetType} {methodInfo} {parameters}");
+        return default!;
     }
+
+    public struct Data(long StartTimestamp);
 }

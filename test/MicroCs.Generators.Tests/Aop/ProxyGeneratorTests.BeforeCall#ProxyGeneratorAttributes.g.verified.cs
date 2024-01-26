@@ -5,13 +5,13 @@
 
 namespace MicroCs.Generators.Aop
 {   // OK
-    [global::System.AttributeUsage(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-    internal sealed class GenerateProxyAttribute : global::System.Attribute
+    [System.AttributeUsage(System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    internal sealed class GenerateProxyAttribute : System.Attribute
     {
     }
 
-    [global::System.AttributeUsage(global::System.AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    internal sealed class InterceptorAttribute : global::System.Attribute
+    [System.AttributeUsage(System.AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+    internal sealed class InterceptorAttribute : System.Attribute
     {
     }
 }

@@ -37,5 +37,21 @@ partial class AopGeneratorUtils
             category: "MicroCs.Generators.Aop",
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor MultipleInterceptionAttributes = new(
+            id: "MCAOP0005",
+            title: "Multiple interception attributes",
+            messageFormat: "Multiple interception attributes",
+            category: "MicroCs.Generators.Aop",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        public static readonly DiagnosticDescriptor NoInterceptionAttributes = new(
+            id: "MCAOP0006",
+            title: "No interception attributes",
+            messageFormat: "No interception attributes",
+            category: "MicroCs.Generators.Aop",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
     }
 }

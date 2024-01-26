@@ -91,6 +91,7 @@ internal class GeneratorTestUtils
         return new[]
             {
                 (folder: dotNet, name: "mscorlib.dll"),
+                (folder: dotNet, name: "netstandard.dll"),
                 (folder: dotNet, name: "System.dll"),
                 (folder: dotNet, name: "System.Core.dll"),
                 (folder: dotNet, name: "System.Runtime.dll"),
