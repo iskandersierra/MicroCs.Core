@@ -45,6 +45,11 @@ internal class ProxyGeneratorInterceptorModel
 
     public bool HasState => (BeforeCall?.HasState ?? false) && HasAfterCalls;
     public bool HasAfterCalls => AfterCall is not null || AfterSuccessCall is not null || AfterFailureCall is not null;
+    public bool HasParametersArgument =>
+        (BeforeCall?.HasParametersArgument ?? false) ||
+        (AfterCall?.HasParametersArgument ?? false) ||
+        (AfterSuccessCall?.HasParametersArgument ?? false) ||
+        (AfterFailureCall?.HasParametersArgument ?? false);
 
     public ProxyBeforeCallModel? BeforeCall { get; set; }
     public ProxyAfterCallModel? AfterCall { get; set; }
@@ -56,15 +61,16 @@ internal abstract class ProxyInterceptorCallModel
 {
     public MethodModel Method { get; set; } = default!;
     public string Name => Method.Name;
-    public IReadOnlyList<ProxyInterceptorCallParameterModel> Parameters { get; set; }
+    public IReadOnlyList<ProxyInterceptorCallParameterModel> Parameters { get; set; } = default!;
+
+    public ProxyInterceptorCallParameterModel? ParametersArgument =>
+        Parameters.FirstOrDefault(p => p.InterceptedParameters is not null);
+    public bool HasParametersArgument => ParametersArgument is not null;
 }
 
 internal class ProxyBeforeCallModel : ProxyInterceptorCallModel
 {
     public bool HasState => !Method.ReturnType.IsVoid;
-    public ProxyInterceptorCallParameterModel? ParametersArgument =>
-        Parameters.FirstOrDefault(p => p.InterceptedParameters is not null);
-    public bool HasParametersArgument => ParametersArgument is not null;
 }
 
 internal class ProxyAfterCallModel : ProxyInterceptorCallModel

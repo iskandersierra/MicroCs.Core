@@ -4,7 +4,7 @@
 /// Marks a parameter to receive an intercepted parameter.
 /// The parameter type must be assignable from the type of the intercepted parameter.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedParameterAttribute : Attribute
 {
     /// <summary>

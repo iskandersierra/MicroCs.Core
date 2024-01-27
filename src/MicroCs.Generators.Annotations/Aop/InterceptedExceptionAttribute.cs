@@ -5,7 +5,7 @@
 /// It is only valid for methods that have the <see cref="InterceptAfterFailureAttribute"/> attribute.
 /// The type of the parameter must be assignable from <see cref="Exception"/>.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedExceptionAttribute : Attribute
 {
 }

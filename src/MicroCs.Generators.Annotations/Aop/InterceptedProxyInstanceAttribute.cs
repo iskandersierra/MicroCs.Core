@@ -3,7 +3,7 @@
 /// <summary>
 /// Marks a parameter to receive the intercepted proxy instance.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedProxyInstanceAttribute : Attribute
 {
 }

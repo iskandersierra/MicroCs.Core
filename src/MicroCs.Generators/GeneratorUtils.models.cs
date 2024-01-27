@@ -52,8 +52,8 @@ internal class MethodParameterModel
 
 internal class AttributeModel
 {
-    public AttributeData Data { get; set; }
-    public TypeModel Type { get; set; }
+    public AttributeData Data { get; set; } = default!;
+    public TypeModel Type { get; set; } = default!;
 }
 
 internal class AttributeArgumentModel

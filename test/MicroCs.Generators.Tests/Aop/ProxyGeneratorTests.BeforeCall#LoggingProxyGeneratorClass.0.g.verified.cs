@@ -30,93 +30,63 @@ partial class LoggingProxyGeneratorClass
     private static readonly System.Reflection.MethodInfo MyMethod_0_Cache;
     void global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod()
     {
-        // var state = interceptor.BeforeCall(...);
-        var state = interceptors.BeforeCall(
-        );
-
-        try
+        var parameters = new object? []
         {
-            iProxyGeneratorInterface.MyMethod();
-
-            // interceptor.AfterSuccessCall(state, result?, ...);
-
-        }
-        catch (Exception exception)
-        {
-            // interceptor.AfterFailedCall(state, exception...);
-
-            throw;
-        }
-        finally
-        {
-            // interceptor.AfterCall(state, ...);
-        }
+        };
+        interceptors.BeforeCall(proxyType: ProxyType_Cache, proxyTypeName: ProxyType_Name, proxyInstance: this, instance: iProxyGeneratorInterface, targetType: IProxyGeneratorInterface_TargetType_Cache, targetTypeName: IProxyGeneratorInterface_TargetType_Name, methodInfo: MyMethod_0_Cache, methodName: MyMethod_0_Name, parameters: parameters);
+        iProxyGeneratorInterface.MyMethod();
     }
-
-    #endregion [ MyMethod ]
-
-    #region [ MyMethod ]
 
     private const string MyMethod_1_Name = nameof(global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod);
     private static readonly System.Reflection.MethodInfo MyMethod_1_Cache;
     string global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod(string input1, int input2)
     {
-        // var state = interceptor.BeforeCall(...);
-        var state = interceptors.BeforeCall(
-        );
-
-        try
+        var parameters = new object? []
         {
-            var result = iproxygeneratorinterface.MyMethod();
-
-            // interceptor.AfterSuccessCall(state, result?, ...);
-
-            return result;
-        }
-        catch (Exception exception)
-        {
-            // interceptor.AfterFailedCall(state, exception...);
-
-            throw;
-        }
-        finally
-        {
-            // interceptor.AfterCall(state, ...);
-        }
+            input1,
+            input2
+        };
+        interceptors.BeforeCall(proxyType: ProxyType_Cache, proxyTypeName: ProxyType_Name, proxyInstance: this, instance: iProxyGeneratorInterface, targetType: IProxyGeneratorInterface_TargetType_Cache, targetTypeName: IProxyGeneratorInterface_TargetType_Name, methodInfo: MyMethod_1_Cache, methodName: MyMethod_1_Name, parameters: parameters);
+        return iProxyGeneratorInterface.MyMethod(input1, input2);
     }
 
-    #endregion [ MyMethod ]
-
-    #region [ MyMethod ]
     private const string MyMethod_2_Name = nameof(global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod);
     private static readonly System.Reflection.MethodInfo MyMethod_2_Cache;
     (string, System.DateTime) global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod(string input1, System.DateTime input2)
     {
-        // var state = interceptor.BeforeCall(...);
-        var state = interceptors.BeforeCall(
-        );
-
-        try
+        var parameters = new object? []
         {
-            var result = iproxygeneratorinterface.MyMethod();
-
-            // interceptor.AfterSuccessCall(state, result?, ...);
-
-            return result;
-        }
-        catch (Exception exception)
-        {
-            // interceptor.AfterFailedCall(state, exception...);
-
-            throw;
-        }
-        finally
-        {
-            // interceptor.AfterCall(state, ...);
-        }
+            input1,
+            input2
+        };
+        interceptors.BeforeCall(proxyType: ProxyType_Cache, proxyTypeName: ProxyType_Name, proxyInstance: this, instance: iProxyGeneratorInterface, targetType: IProxyGeneratorInterface_TargetType_Cache, targetTypeName: IProxyGeneratorInterface_TargetType_Name, methodInfo: MyMethod_2_Cache, methodName: MyMethod_2_Name, parameters: parameters);
+        return iProxyGeneratorInterface.MyMethod(input1, input2);
     }
 
-    #endregion [ MyMethod ]
+    private const string MyMethod_3_Name = nameof(global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod);
+    private static readonly System.Reflection.MethodInfo MyMethod_3_Cache;
+    async System.Threading.Tasks.Task global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod(int input1, System.Threading.CancellationToken cancel)
+    {
+        var parameters = new object? []
+        {
+            input1,
+            cancel
+        };
+        interceptors.BeforeCall(proxyType: ProxyType_Cache, proxyTypeName: ProxyType_Name, proxyInstance: this, instance: iProxyGeneratorInterface, targetType: IProxyGeneratorInterface_TargetType_Cache, targetTypeName: IProxyGeneratorInterface_TargetType_Name, methodInfo: MyMethod_3_Cache, methodName: MyMethod_3_Name, parameters: parameters);
+        await iProxyGeneratorInterface.MyMethod(input1, cancel);
+    }
 
-    #endregion [ IProxyGeneratorInterface ]
+    private const string MyMethod_4_Name = nameof(global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod);
+    private static readonly System.Reflection.MethodInfo MyMethod_4_Cache;
+    async System.Threading.Tasks.Task<string> global::MicroCs.Generators.Lib.Samples.BeforeCall.IProxyGeneratorInterface.MyMethod(int input1, string? input2, System.Threading.CancellationToken cancel)
+    {
+        var parameters = new object? []
+        {
+            input1,
+            input2,
+            cancel
+        };
+        interceptors.BeforeCall(proxyType: ProxyType_Cache, proxyTypeName: ProxyType_Name, proxyInstance: this, instance: iProxyGeneratorInterface, targetType: IProxyGeneratorInterface_TargetType_Cache, targetTypeName: IProxyGeneratorInterface_TargetType_Name, methodInfo: MyMethod_4_Cache, methodName: MyMethod_4_Name, parameters: parameters);
+        return await iProxyGeneratorInterface.MyMethod(input1, input2, cancel);
+    }
 }

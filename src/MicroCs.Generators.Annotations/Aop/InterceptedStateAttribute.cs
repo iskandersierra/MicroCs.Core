@@ -6,7 +6,7 @@
 /// It only makes sense when the before interceptor returns a state object.
 /// The type of the parameter must be the same as the type of the state object.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedStateAttribute : Attribute
 {
 }

@@ -5,7 +5,7 @@
 /// The method is called even if the intercepted method throws an exception.
 /// It is called in a finally block.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Method)]
 public sealed class InterceptAfterAttribute : Attribute
 {
 }

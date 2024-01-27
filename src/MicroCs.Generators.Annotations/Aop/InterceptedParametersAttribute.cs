@@ -4,7 +4,7 @@
 /// Marks a parameter to receive the list of parameters passed to the intercepted method.
 /// The type of the parameter must be <code>object?[]</code>.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedParametersAttribute : Attribute
 {
     /// <summary>

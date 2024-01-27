@@ -16,6 +16,18 @@ public class ProxyGeneratorTests
     [Fact]
     public async Task BeforeCall()
     {
-        await GeneratorTestUtils.Verify<ProxyGenerator>($"{AssetsPath}.BeforeCall.cs");
+        await GeneratorTestUtils.Verify<ProxyGenerator>(
+            new []
+            {
+                $"{AssetsPath}.BeforeCall.cs",
+                $"{AssetsPath}.BeforeCall.Interface.cs",
+                $"{AssetsPath}.BeforeCall.Interceptor.cs",
+            });
+    }
+
+    [Fact]
+    public async Task BeforeAfterAllCall()
+    {
+        await GeneratorTestUtils.Verify<ProxyGenerator>($"{AssetsPath}.BeforeAfterAllCall.cs");
     }
 }

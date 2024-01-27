@@ -6,7 +6,7 @@
 /// It is called after the intercepted method throws an exception.
 /// If the marked method returns a value, it is used as the return value of the intercepted method.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Method)]
 public sealed class InterceptAfterFailureAttribute : Attribute
 {
 }

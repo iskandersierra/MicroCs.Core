@@ -1,9 +1,14 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿using System;
+using System.Linq;
 using MicroCs.Generators.Aop;
+using MicroCs.Generators.Samples.BeforeAfterAllCall;
+using MicroCs.Generators.Samples.BeforeCall;
 
-var attr = new InterceptBeforeAttribute();
-ListAllLoadedAssemblies();
+//var attr = new InterceptBeforeAttribute();
+//ListAllLoadedAssemblies();
+
+//await BeforeCallSample.Run();
+await BeforeAfterAllCallSample.Run();
 
 void ListAllLoadedAssemblies()
 {

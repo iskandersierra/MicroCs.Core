@@ -4,17 +4,22 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Aop\assets\BeforeAfterAllCall.cs" />
     <Compile Remove="Aop\assets\BeforeCall.cs" />
+    <Compile Remove="Aop\assets\BeforeCall.Interceptor.cs" />
+    <Compile Remove="Aop\assets\BeforeCall.Interface.cs" />
     <Compile Remove="Aop\assets\EmptySource.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Aop\assets\BeforeAfterAllCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeCall.Interceptor.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeCall.Interface.cs" />
     <EmbeddedResource Include="Aop\assets\BeforeCall.cs" />
     <EmbeddedResource Include="Aop\assets\EmptySource.cs" />
   </ItemGroup>

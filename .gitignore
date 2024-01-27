@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Verify received files
 *.received.cs
+
+# Local nuget package directory
+.pack/

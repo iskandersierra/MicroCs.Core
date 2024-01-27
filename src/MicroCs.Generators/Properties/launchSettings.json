@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Debug on VS": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\MicroCs.Generators.Samples\\MicroCs.Generators.Samples.csproj"
+    }
+  }
+}

@@ -60,6 +60,25 @@ internal static partial class GeneratorUtils
 
     #endregion [ Attributes ]
 
+    public static ExpressionSyntax CreateBinaryExpression(
+        SyntaxKind syntaxKind,
+        params ExpressionSyntax[] expressions)
+    {
+        if (expressions.Length == 0)
+            throw new ArgumentException("Value cannot be an empty collection.", nameof(expressions));
+
+        if (expressions.Length == 1) return expressions[0];
+
+        var result = expressions[0];
+
+        for (var i = 1; i < expressions.Length; i++)
+        {
+            result = BinaryExpression(syntaxKind, result, expressions[i]);
+        }
+
+        return result;
+    }
+
     #endregion [ Syntax ]
 
     #region [ Semantics ]

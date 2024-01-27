@@ -4,7 +4,7 @@
 /// Marks a parameter to receive the intercepted member.
 /// The parameter type must be either <see cref="System.Reflection.MemberInfo"/> or <see cref="string"/>.
 /// </summary>
-[AttributeUsage(AttributeTargets.Parameter, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Parameter)]
 public sealed class InterceptedMemberAttribute : Attribute
 {
 }
