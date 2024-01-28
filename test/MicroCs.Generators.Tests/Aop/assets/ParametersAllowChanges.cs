@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
+namespace MicroCs.Generators.Lib.Samples.ParametersAllowChanges
 {
     public interface IProxyGeneratorInterface
     {
@@ -27,7 +27,7 @@ namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
             [InterceptedTargetType] string targetTypeName,
             [InterceptedMember] MethodInfo methodInfo,
             [InterceptedMember] string methodName,
-            [InterceptedParameters] object?[] parameters)
+            [InterceptedParameters(AllowChanges = true)] object?[] parameters)
         {
             return default!;
         }
@@ -87,9 +87,9 @@ namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
     }
 }
 
-namespace MicroCs.Generators.Samples.BeforeAfterAllCall
+namespace MicroCs.Generators.Samples.ParametersAllowChanges
 {
-    using MicroCs.Generators.Lib.Samples.BeforeAfterAllCall;
+    using MicroCs.Generators.Lib.Samples.ParametersAllowChanges;
 
     [GenerateProxy]
     public partial class LoggingProxyGeneratorClass :

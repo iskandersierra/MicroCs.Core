@@ -1,0 +1,14 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0001,
+      Title: Generated proxy has no interfaces,
+      Severity: Warning,
+      WarningLevel: 1,
+      Location: : (26,4)-(31,5),
+      MessageFormat: Generated proxy {0} has no interfaces,
+      Message: Generated proxy LoggingProxyGeneratorClass has no interfaces,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

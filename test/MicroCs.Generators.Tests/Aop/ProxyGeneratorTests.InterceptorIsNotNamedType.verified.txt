@@ -1,0 +1,14 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0004,
+      Title: Generated proxy interceptor is not named type,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (31,34)-(31,46),
+      MessageFormat: Generated proxy interceptor [{0}: {1}] is not named type,
+      Message: Generated proxy interceptor [interceptors: object[]] is not named type,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

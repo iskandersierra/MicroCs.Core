@@ -1,0 +1,14 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0003,
+      Title: Generated proxy has multiple interceptors,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (34,45)-(34,58),
+      MessageFormat: Generated proxy {0} has multiple interceptors,
+      Message: Generated proxy LoggingProxyGeneratorClass has multiple interceptors,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

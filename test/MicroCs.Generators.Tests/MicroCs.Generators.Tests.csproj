@@ -9,18 +9,46 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Aop\assets\BeforeAfterAllCall - Copy.Interceptor.cs" />
+    <Compile Remove="Aop\assets\BeforeAfterAllCall - Copy.Interface.cs" />
     <Compile Remove="Aop\assets\BeforeAfterAllCall.cs" />
+    <Compile Remove="Aop\assets\BeforeAfterCall.cs" />
+    <Compile Remove="Aop\assets\BeforeAfterFailureCall.cs" />
+    <Compile Remove="Aop\assets\BeforeAfterSuccessCall.cs" />
     <Compile Remove="Aop\assets\BeforeCall.cs" />
-    <Compile Remove="Aop\assets\BeforeCall.Interceptor.cs" />
-    <Compile Remove="Aop\assets\BeforeCall.Interface.cs" />
+    <Compile Remove="Aop\assets\BeforeNoAfterCall.cs" />
+    <Compile Remove="Aop\assets\BeforeNoAfterFailureCall.cs" />
+    <Compile Remove="Aop\assets\BeforeNoAfterSuccessCall.cs" />
     <Compile Remove="Aop\assets\EmptySource.cs" />
+    <Compile Remove="Aop\assets\HasMultipleInterceptors.cs" />
+    <Compile Remove="Aop\assets\HasNoInterceptor.cs" />
+    <Compile Remove="Aop\assets\HasNoInterfaces.cs" />
+    <Compile Remove="Aop\assets\InterceptorIsNotNamedType.cs" />
+    <Compile Remove="Aop\assets\MultipleInterceptionAttributes.cs" />
+    <Compile Remove="Aop\assets\NoInterceptionAttributes.cs" />
+    <Compile Remove="Aop\assets\ParametersAllowChanges.cs" />
+    <Compile Remove="Aop\assets\UnexpectedTypeOnSymbol.cs" />
+    <Compile Remove="Aop\assets\WithoutNamespace.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Aop\assets\UnexpectedTypeOnSymbol.cs" />
+    <EmbeddedResource Include="Aop\assets\ParametersAllowChanges.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeNoAfterCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeNoAfterFailureCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeNoAfterSuccessCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeAfterCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeAfterFailureCall.cs" />
+    <EmbeddedResource Include="Aop\assets\BeforeAfterSuccessCall.cs" />
     <EmbeddedResource Include="Aop\assets\BeforeAfterAllCall.cs" />
-    <EmbeddedResource Include="Aop\assets\BeforeCall.Interceptor.cs" />
-    <EmbeddedResource Include="Aop\assets\BeforeCall.Interface.cs" />
     <EmbeddedResource Include="Aop\assets\BeforeCall.cs" />
+    <EmbeddedResource Include="Aop\assets\NoInterceptionAttributes.cs" />
+    <EmbeddedResource Include="Aop\assets\MultipleInterceptionAttributes.cs" />
+    <EmbeddedResource Include="Aop\assets\InterceptorIsNotNamedType.cs" />
+    <EmbeddedResource Include="Aop\assets\HasNoInterfaces.cs" />
+    <EmbeddedResource Include="Aop\assets\WithoutNamespace.cs" />
+    <EmbeddedResource Include="Aop\assets\HasMultipleInterceptors.cs" />
+    <EmbeddedResource Include="Aop\assets\HasNoInterceptor.cs" />
     <EmbeddedResource Include="Aop\assets\EmptySource.cs" />
   </ItemGroup>
 

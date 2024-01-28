@@ -1,0 +1,44 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0005,
+      Title: Multiple interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (19,19)-(19,29),
+      MessageFormat: Multiple interception attributes,
+      Message: Multiple interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0005,
+      Title: Multiple interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (26,19)-(26,29),
+      MessageFormat: Multiple interception attributes,
+      Message: Multiple interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0005,
+      Title: Multiple interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (33,19)-(33,29),
+      MessageFormat: Multiple interception attributes,
+      Message: Multiple interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0005,
+      Title: Multiple interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (40,19)-(40,29),
+      MessageFormat: Multiple interception attributes,
+      Message: Multiple interception attributes,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

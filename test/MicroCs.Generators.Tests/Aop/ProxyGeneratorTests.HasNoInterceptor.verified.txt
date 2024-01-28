@@ -1,0 +1,14 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0002,
+      Title: Generated proxy has no interceptor,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (27,25)-(27,51),
+      MessageFormat: Generated proxy {0} has no interceptor,
+      Message: Generated proxy LoggingProxyGeneratorClass has no interceptor,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

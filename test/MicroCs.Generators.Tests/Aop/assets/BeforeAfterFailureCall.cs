@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
+namespace MicroCs.Generators.Lib.Samples.BeforeAfterFailureCall
 {
     public interface IProxyGeneratorInterface
     {
@@ -32,40 +32,6 @@ namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
             return default!;
         }
 
-        [InterceptAfterSuccess()]
-        public void AfterSuccessCall(
-            [InterceptedProxyType] Type proxyType,
-            [InterceptedProxyType] string proxyTypeName,
-            [InterceptedProxyInstance] object proxyInstance,
-            [InterceptedInstance] IProxyGeneratorInterface instance,
-            [InterceptedTargetType] Type targetType,
-            [InterceptedTargetType] string targetTypeName,
-            [InterceptedMember] MethodInfo methodInfo,
-            [InterceptedMember] string methodName,
-            [InterceptedParameters] object?[] parameters,
-            [InterceptedResult] object? result,
-            [InterceptedException] Exception? exception,
-            [InterceptedState] Data state)
-        {
-        }
-
-        [InterceptAfter()]
-        public void AfterCall(
-            [InterceptedProxyType] Type proxyType,
-            [InterceptedProxyType] string proxyTypeName,
-            [InterceptedProxyInstance] object proxyInstance,
-            [InterceptedInstance] IProxyGeneratorInterface instance,
-            [InterceptedTargetType] Type targetType,
-            [InterceptedTargetType] string targetTypeName,
-            [InterceptedMember] MethodInfo methodInfo,
-            [InterceptedMember] string methodName,
-            [InterceptedParameters] object?[] parameters,
-            [InterceptedResult] object? result,
-            [InterceptedException] Exception? exception,
-            [InterceptedState] Data state)
-        {
-        }
-
         [InterceptAfterFailure()]
         public void AfterFailureCall(
             [InterceptedProxyType] Type proxyType,
@@ -87,9 +53,9 @@ namespace MicroCs.Generators.Lib.Samples.BeforeAfterAllCall
     }
 }
 
-namespace MicroCs.Generators.Samples.BeforeAfterAllCall
+namespace MicroCs.Generators.Samples.BeforeAfterFailureCall
 {
-    using MicroCs.Generators.Lib.Samples.BeforeAfterAllCall;
+    using MicroCs.Generators.Lib.Samples.BeforeAfterFailureCall;
 
     [GenerateProxy]
     public partial class LoggingProxyGeneratorClass :

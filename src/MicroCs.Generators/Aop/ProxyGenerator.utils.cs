@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 using System.Collections.Immutable;
+using System.Reflection;
 using System.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -116,8 +117,8 @@ internal static class ProxyGeneratorUtils
     {
         return node is ClassDeclarationSyntax { AttributeLists.Count: > 0 } @class &&
                @class.Modifiers.Any(SyntaxKind.PartialKeyword) &&
-               !@class.Modifiers.Any(SyntaxKind.StaticKeyword) &&
-               @class.BaseList?.Types is { Count: > 0 };
+               !@class.Modifiers.Any(SyntaxKind.StaticKeyword);
+            // && @class.BaseList?.Types is { Count: > 0 };
     }
 
     private static ClassDeclarationSyntax? HasGenerateProxyAttribute(
@@ -136,7 +137,8 @@ internal static class ProxyGeneratorUtils
         SourceProductionContext context,
         (Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes) data)
     {
-        var models = data.classes.ExtractClassModels(context, data.compilation);
+        var models = data.classes
+            .ExtractClassModels(context, data.compilation);
 
         for (int i = 0; i < models.Count; i++)
         {
@@ -157,7 +159,8 @@ internal static class ProxyGeneratorUtils
         Compilation compilation)
     {
         return classes
-            .Select(classSyntax => classSyntax.ExtractGeneratorClassModel(context, compilation))
+            .Select(classSyntax => classSyntax
+                .ExtractGeneratorClassModel(context, compilation))
             .Where(model => model is not null)
             .Select(model => model!)
             .ToArray();
@@ -174,10 +177,14 @@ internal static class ProxyGeneratorUtils
             return null;
 
         var className = classSymbol.Name;
-        var @namespace = classSymbol.ContainingNamespace?.ToDisplayString();
+        var @namespace = classSymbol.ContainingNamespace.GetNamespace();
 
         var interfaces = classSymbol.AllInterfaces
-            .Select(interfaceSymbol => interfaceSymbol.ExtractProxyInterfaceModel(context, compilation))
+            .Select(interfaceSymbol => interfaceSymbol
+                .ExtractProxyInterfaceModel(
+                    context,
+                    compilation,
+                    interfaceSymbol.Locations.FirstOrDefault() ?? classSyntax.GetLocation()))
             .Where(model => model is not null)
             .Select(model => model!)
             .ToArray();
@@ -192,32 +199,45 @@ internal static class ProxyGeneratorUtils
             return null;
         }
 
-        var interceptor = classSymbol.ExtractInterceptorModel(context, compilation);
+        var interceptor = classSymbol
+            .ExtractInterceptorModel(context, compilation, classSyntax.GetLocation());
 
         if (interceptor is null) return null;
 
-        return new ProxyGeneratorClassModel
+        var resultModel = new ProxyGeneratorClassModel
         {
             Namespace = @namespace,
             Name = className,
             Interfaces = interfaces,
             Interceptor = interceptor,
         };
+
+        foreach (var @interface in interfaces)
+        {
+            @interface.DeclaringClass = resultModel;
+        }
+
+        interceptor.DeclaringClass = resultModel;
+
+        return resultModel;
     }
 
     private static ProxyGeneratorInterfaceModel? ExtractProxyInterfaceModel(
         this INamedTypeSymbol typeSymbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
-        var type = typeSymbol.ExtractTypeWithMembersModel(context, compilation);
+        var type = typeSymbol
+            .ExtractTypeWithMembersModel(context, compilation, location);
 
         if (type is null) return null;
 
         var methods = type.Methods
             .Select((method, index) =>
             {
-                var asyncInfo = method.ReturnType.Symbol.GetAsyncInfo(context, compilation);
+                var asyncInfo = method.ReturnType.Symbol
+                    .GetAsyncInfo(context, compilation, location);
 
                 return new ProxyGeneratorInterfaceMethodModel
                 {
@@ -229,41 +249,55 @@ internal static class ProxyGeneratorUtils
             })
             .ToArray();
 
-        return new ProxyGeneratorInterfaceModel
+        var resultModel = new ProxyGeneratorInterfaceModel
         {
             ParameterName = typeSymbol.Name.ToParameterName(),
             Type = type,
             Methods = methods,
         };
+
+        foreach (var method in methods)
+        {
+            method.DeclaringInterface = resultModel;
+        }
+
+        return resultModel;
     }
 
     private static ProxyGeneratorInterceptorModel? ExtractInterceptorModel(
         this INamedTypeSymbol classSymbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
-        if (!ExtractInterceptorField(classSymbol, context, out var interceptorField)) return null;
+        if (!ExtractInterceptorField(
+                classSymbol,
+                context,
+                location,
+                out var interceptorField))
+            return null;
 
         if (interceptorField!.Type is not INamedTypeSymbol interceptorTypeSymbol)
         {
             context.ReportDiagnostic(
                 Diagnostic.Create(
                     AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyInterceptorIsNotNamedType,
-                    interceptorField.Locations[0],
-                    classSymbol.Name));
+                    interceptorField.Locations.FirstOrDefault() ?? location,
+                    interceptorField.Name,
+                    interceptorField.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
 
             return null;
         }
 
         var interceptorType = interceptorTypeSymbol
-            .ExtractTypeWithMembersModel(context, compilation);
+            .ExtractTypeWithMembersModel(context, compilation, location);
 
         if (interceptorType is null) return null;
 
-        var beforeCall = interceptorType.ExtractBeforeCall(context, compilation);
-        var afterCall = interceptorType.ExtractAfterCall(context, compilation);
-        var afterSuccessCall = interceptorType.ExtractAfterSuccessCall(context, compilation);
-        var afterFailureCall = interceptorType.ExtractAfterFailureCall(context, compilation);
+        var beforeCall = interceptorType.ExtractBeforeCall(context, compilation, location);
+        var afterCall = interceptorType.ExtractAfterCall(context, compilation, location);
+        var afterSuccessCall = interceptorType.ExtractAfterSuccessCall(context, compilation, location);
+        var afterFailureCall = interceptorType.ExtractAfterFailureCall(context, compilation, location);
 
         return new ProxyGeneratorInterceptorModel
         {
@@ -279,6 +313,7 @@ internal static class ProxyGeneratorUtils
     private static bool ExtractInterceptorField(
         INamedTypeSymbol classSymbol,
         SourceProductionContext context,
+        Location location,
         out IFieldSymbol? interceptorField)
     {
         interceptorField = null;
@@ -293,7 +328,7 @@ internal static class ProxyGeneratorUtils
                 context.ReportDiagnostic(
                     Diagnostic.Create(
                         AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasNoInterceptor,
-                        classSymbol.Locations[0],
+                        classSymbol.Locations.FirstOrDefault() ?? location,
                         classSymbol.Name));
                 return false;
 
@@ -301,7 +336,7 @@ internal static class ProxyGeneratorUtils
                 context.ReportDiagnostic(
                     Diagnostic.Create(
                         AopGeneratorUtils.DiagnosticDescriptors.GeneratedProxyHasMultipleInterceptors,
-                        interceptorFields[1].Locations[0],
+                        interceptorFields[1].Locations.FirstOrDefault() ?? location,
                         classSymbol.Name));
                 return false;
 
@@ -314,7 +349,8 @@ internal static class ProxyGeneratorUtils
     private static ProxyBeforeCallModel? ExtractBeforeCall(
         this TypeWithMembersModel type,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var found = type.Methods
             .Select(m => (
@@ -324,7 +360,9 @@ internal static class ProxyGeneratorUtils
 
         if (found.attr is not { } attr) return null;
 
-        var parameters = ExtractCallParameters(found.method, context, compilation);
+        var parameters = ExtractCallParameters(found.method, context, compilation, location);
+
+        if (parameters == null) return null;
 
         return new ProxyBeforeCallModel()
         {
@@ -336,7 +374,8 @@ internal static class ProxyGeneratorUtils
     private static ProxyAfterCallModel? ExtractAfterCall(
         this TypeWithMembersModel type,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var found = type.Methods
             .Select(m => (
@@ -346,7 +385,9 @@ internal static class ProxyGeneratorUtils
 
         if (found.attr is not { } attr) return null;
 
-        var parameters = ExtractCallParameters(found.method, context, compilation);
+        var parameters = ExtractCallParameters(found.method, context, compilation, location);
+
+        if (parameters is null) return null;
 
         return new ProxyAfterCallModel()
         {
@@ -358,7 +399,8 @@ internal static class ProxyGeneratorUtils
     private static ProxyAfterSuccessCallModel? ExtractAfterSuccessCall(
         this TypeWithMembersModel type,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var found = type.Methods
             .Select(m => (
@@ -369,7 +411,9 @@ internal static class ProxyGeneratorUtils
 
         if (found.attr is not { } attr) return null;
 
-        var parameters = ExtractCallParameters(found.method, context, compilation);
+        var parameters = ExtractCallParameters(found.method, context, compilation, location);
+
+        if (parameters is null) return null;
 
         return new ProxyAfterSuccessCallModel()
         {
@@ -381,7 +425,8 @@ internal static class ProxyGeneratorUtils
     private static ProxyAfterFailureCallModel? ExtractAfterFailureCall(
         this TypeWithMembersModel type,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var found = type.Methods
             .Select(m => (
@@ -392,7 +437,9 @@ internal static class ProxyGeneratorUtils
 
         if (found.attr is not { } attr) return null;
 
-        var parameters = ExtractCallParameters(found.method, context, compilation);
+        var parameters = ExtractCallParameters(found.method, context, compilation, location);
+
+        if (parameters is null) return null;
 
         return new ProxyAfterFailureCallModel()
         {
@@ -401,141 +448,229 @@ internal static class ProxyGeneratorUtils
         };
     }
 
-    private static IReadOnlyList<ProxyInterceptorCallParameterModel> ExtractCallParameters(
+    private static IReadOnlyList<ProxyInterceptorCallParameterModel>? ExtractCallParameters(
         MethodModel method,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
-        return method.Parameters
-            .Select(parameter =>
-            {
-                var attributes = parameter.Symbol.ExtractAttributes(context, compilation);
+        var parameters = new List<ProxyInterceptorCallParameterModel>();
 
-                var hasInterceptedException = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedExceptionAttribute).FullName!);
+        foreach (var parameter in method.Parameters)
+        {
+            var attributes = parameter.Symbol
+                .ExtractAttributes(context, compilation, location);
 
-                var hasInterceptedInstance = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedInstanceAttribute).FullName!);
+            var hasInterceptedException = attributes
+                .Any(a => a.Type.FullName == typeof(InterceptedExceptionAttribute).FullName!);
 
-                var hasInterceptedMember = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedMemberAttribute).FullName!);
+            var hasInterceptedInstance = attributes
+                .Any(a => a.Type.FullName == typeof(InterceptedInstanceAttribute).FullName!);
 
-                var interceptedParameter = attributes
-                    .Where(a => a.Type.FullName == typeof(InterceptedParameterAttribute).FullName!)
-                    .Select(a => new ProxyInterceptorInterceptedParameterAttributeModel
-                    {
-                        Position = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Position))
-                            .Select(na => na.Value.Value is int position ? position : default(int?))
-                            .FirstOrDefault(),
-
-                        Name = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Name))
-                            .Select(na => na.Value.Value as string)
-                            .FirstOrDefault(),
-
-                        TypeName = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeName))
-                            .Select(na => na.Value.Value as string)
-                            .FirstOrDefault(),
-
-                        TypeNamespace = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeNamespace))
-                            .Select(na => na.Value.Value as string)
-                            .FirstOrDefault(),
-
-                        TypeFullName = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeFullName))
-                            .Select(na => na.Value.Value as string)
-                            .FirstOrDefault(),
-
-                        Type = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Type))
-                            .Select(na => na.Value.Value is INamedTypeSymbol type ? type.ToNamedTypeModel(context, compilation) : null)
-                            .FirstOrDefault(),
-
-                        Predicate = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Predicate))
-                            .Select(na => na.Value.Value as string)
-                            .FirstOrDefault(),
-                    })
-                    .FirstOrDefault();
-
-                var interceptedParameters = attributes
-                    .Where(a => a.Type.FullName == typeof(InterceptedParametersAttribute).FullName!)
-                    .Select(a => new ProxyInterceptorInterceptedParametersAttributeModel
-                    {
-                        AllowChanges = a.Data.NamedArguments
-                            .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParametersAttributeModel.AllowChanges))
-                            .Select(na => na.Value.Value is true)
-                            .FirstOrDefault(),
-                    })
-                    .FirstOrDefault();
-
-                var hasInterceptedProxyInstance = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedProxyInstanceAttribute).FullName!);
-
-                var hasInterceptedProxyType = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedProxyTypeAttribute).FullName!);
-
-                var hasInterceptedResult = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedResultAttribute).FullName!);
-
-                var hasInterceptedState = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedStateAttribute).FullName!);
-
-                var hasInterceptedTarget = attributes
-                    .Any(a => a.Type.FullName == typeof(InterceptedTargetTypeAttribute).FullName!);
-
-                var activeAttributes = new[]
+            var interceptedMember = attributes
+                .Where(a => a.Type.FullName == typeof(InterceptedMemberAttribute).FullName!)
+                .Select(a =>
                 {
+                    var kind = GetMemberReferenceKind(parameter, context, compilation, location);
+
+                    if (kind is null) return null;
+
+                    return new ProxyInterceptorInterceptedMemberAttributeModel
+                    {
+                        ReferenceKind = kind.Value,
+                    };
+                })
+                .FirstOrDefault();
+
+            var interceptedParameter = attributes
+                .Where(a => a.Type.FullName == typeof(InterceptedParameterAttribute).FullName!)
+                .Select(a => new ProxyInterceptorInterceptedParameterAttributeModel
+                {
+                    Position = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Position))
+                        .Select(na => na.Value.Value is int position ? position : default(int?))
+                        .FirstOrDefault(),
+
+                    Name = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Name))
+                        .Select(na => na.Value.Value as string)
+                        .FirstOrDefault(),
+
+                    TypeName = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeName))
+                        .Select(na => na.Value.Value as string)
+                        .FirstOrDefault(),
+
+                    TypeNamespace = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeNamespace))
+                        .Select(na => na.Value.Value as string)
+                        .FirstOrDefault(),
+
+                    TypeFullName = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.TypeFullName))
+                        .Select(na => na.Value.Value as string)
+                        .FirstOrDefault(),
+
+                    Type = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Type))
+                        .Select(na => na.Value.Value is INamedTypeSymbol type ? type.ToTypeModel(context, compilation, location) : null)
+                        .FirstOrDefault(),
+
+                    Predicate = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParameterAttributeModel.Predicate))
+                        .Select(na => na.Value.Value as string)
+                        .FirstOrDefault(),
+                })
+                .FirstOrDefault();
+
+            var interceptedParameters = attributes
+                .Where(a => a.Type.FullName == typeof(InterceptedParametersAttribute).FullName!)
+                .Select(a => new ProxyInterceptorInterceptedParametersAttributeModel
+                {
+                    AllowChanges = a.Data.NamedArguments
+                        .Where(na => na.Key == nameof(ProxyInterceptorInterceptedParametersAttributeModel.AllowChanges))
+                        .Select(na => na.Value.Value is true)
+                        .FirstOrDefault(),
+                })
+                .FirstOrDefault();
+
+            var hasInterceptedProxyInstance = attributes
+                .Any(a => a.Type.FullName == typeof(InterceptedProxyInstanceAttribute).FullName!);
+
+            var interceptedProxyType = attributes
+                .Where(a => a.Type.FullName == typeof(InterceptedProxyTypeAttribute).FullName!)
+                .Select(a =>
+                {
+                    var kind = GetTypeReferenceKind(parameter, context, compilation, location);
+
+                    if (kind is null) return null;
+
+                    return new ProxyInterceptorInterceptedProxyTypeAttributeModel
+                    {
+                        ReferenceKind = kind.Value,
+                    };
+                })
+                .FirstOrDefault();
+
+            var hasInterceptedResult = attributes
+                .Any(a => a.Type.FullName == typeof(InterceptedResultAttribute).FullName!);
+
+            var hasInterceptedState = attributes
+                .Any(a => a.Type.FullName == typeof(InterceptedStateAttribute).FullName!);
+
+            var interceptedTarget = attributes
+                .Where(a => a.Type.FullName == typeof(InterceptedTargetTypeAttribute).FullName!)
+                .Select(a =>
+                {
+                    var kind = GetTypeReferenceKind(parameter, context, compilation, location);
+
+                    if (kind is null) return null;
+
+                    return new ProxyInterceptorInterceptedTargetTypeAttributeModel
+                    {
+                        ReferenceKind = kind.Value,
+                    };
+                })
+                .FirstOrDefault();
+
+            var activeAttributes = new[]
+            {
                     hasInterceptedException ? nameof(InterceptedExceptionAttribute) : null,
                     hasInterceptedInstance ? nameof(InterceptedInstanceAttribute) : null,
-                    hasInterceptedMember ? nameof(InterceptedMemberAttribute) : null,
+                    interceptedMember is not null ? nameof(InterceptedMemberAttribute) : null,
                     interceptedParameter is not null ? nameof(InterceptedParameterAttribute) : null,
                     interceptedParameters is not null ? nameof(InterceptedParametersAttribute) : null,
                     hasInterceptedProxyInstance ? nameof(InterceptedProxyInstanceAttribute) : null,
-                    hasInterceptedProxyType ? nameof(InterceptedProxyTypeAttribute) : null,
+                    interceptedProxyType is not null ? nameof(InterceptedProxyTypeAttribute) : null,
                     hasInterceptedResult ? nameof(InterceptedResultAttribute) : null,
                     hasInterceptedState ? nameof(InterceptedStateAttribute) : null,
-                    hasInterceptedTarget ? nameof(InterceptedTargetTypeAttribute) : null,
+                    interceptedTarget is not null ? nameof(InterceptedTargetTypeAttribute) : null,
                 }.Where(e => e is not null).ToArray();
 
-                if (activeAttributes.Length > 1)
-                {
-                    context.ReportDiagnostic(
-                        Diagnostic.Create(
-                            AopGeneratorUtils.DiagnosticDescriptors.MultipleInterceptionAttributes,
-                            parameter.Symbol.Locations[0],
-                            parameter.Symbol.Name,
-                            string.Join(", ", activeAttributes)));
-                }
+            if (activeAttributes.Length > 1)
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        AopGeneratorUtils.DiagnosticDescriptors.MultipleInterceptionAttributes,
+                        parameter.Symbol.Locations.FirstOrDefault() ?? location,
+                        parameter.Symbol.Name,
+                        string.Join(", ", activeAttributes)));
 
-                if (activeAttributes.Length == 0)
-                {
-                    context.ReportDiagnostic(
-                        Diagnostic.Create(
-                            AopGeneratorUtils.DiagnosticDescriptors.NoInterceptionAttributes,
-                            parameter.Symbol.Locations[0],
-                            parameter.Symbol.Name));
-                }
+                return null;
+            }
 
-                return new ProxyInterceptorCallParameterModel
-                {
-                    Parameter = parameter,
-                    InterceptedException = hasInterceptedException ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedInstance = hasInterceptedInstance ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedMember = hasInterceptedMember ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedParameter = interceptedParameter,
-                    InterceptedParameters = interceptedParameters,
-                    InterceptedProxyInstance = hasInterceptedProxyInstance ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedProxyType = hasInterceptedProxyType ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedResult = hasInterceptedResult ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedState = hasInterceptedState ? ProxyInterceptorAttributeModel.Default : null,
-                    InterceptedTargetType = hasInterceptedTarget ? ProxyInterceptorAttributeModel.Default : null,
-                };
-            })
-            .ToArray();
+            if (activeAttributes.Length == 0)
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        AopGeneratorUtils.DiagnosticDescriptors.NoInterceptionAttributes,
+                        parameter.Symbol.Locations.FirstOrDefault() ?? location,
+                        parameter.Symbol.Name));
+
+                return null;
+            }
+
+            parameters.Add(new ProxyInterceptorCallParameterModel
+            {
+                Parameter = parameter,
+                InterceptedException = hasInterceptedException ? ProxyInterceptorAttributeModel.Default : null,
+                InterceptedInstance = hasInterceptedInstance ? ProxyInterceptorAttributeModel.Default : null,
+                InterceptedMember = interceptedMember,
+                InterceptedParameter = interceptedParameter,
+                InterceptedParameters = interceptedParameters,
+                InterceptedProxyInstance = hasInterceptedProxyInstance ? ProxyInterceptorAttributeModel.Default : null,
+                InterceptedProxyType = interceptedProxyType,
+                InterceptedResult = hasInterceptedResult ? ProxyInterceptorAttributeModel.Default : null,
+                InterceptedState = hasInterceptedState ? ProxyInterceptorAttributeModel.Default : null,
+                InterceptedTargetType = interceptedTarget,
+            });
+        }
+
+        return parameters;
+    }
+
+    private static MemberReferenceKind? GetMemberReferenceKind(
+        MethodParameterModel parameter,
+        SourceProductionContext context,
+        Compilation compilation,
+        Location location)
+    {
+        if (parameter.Type.FullName == "string")
+            return MemberReferenceKind.String;
+
+        if (parameter.Type.FullName == typeof(MethodInfo).FullName)
+            return MemberReferenceKind.MethodInfo;
+
+        context.ReportDiagnostic(
+            Diagnostic.Create(
+                AopGeneratorUtils.DiagnosticDescriptors.InterceptedMemberParameterTypeIsInvalid,
+                parameter.Symbol.Locations.FirstOrDefault() ?? location,
+                parameter.Symbol.Name,
+                parameter.Type.FullName));
+
+        return null;
+    }
+
+    private static TypeReferenceKind? GetTypeReferenceKind(
+        MethodParameterModel parameter,
+        SourceProductionContext context,
+        Compilation compilation,
+        Location location)
+    {
+        if (parameter.Type.FullName == "string")
+            return TypeReferenceKind.String;
+
+        if (parameter.Type.FullName == typeof(Type).FullName)
+            return TypeReferenceKind.Type;
+
+        context.ReportDiagnostic(
+            Diagnostic.Create(
+                AopGeneratorUtils.DiagnosticDescriptors.InterceptedTypeParameterTypeIsInvalid,
+                parameter.Symbol.Locations.FirstOrDefault() ?? location,
+                parameter.Symbol.Name,
+                parameter.Type.FullName));
+
+        return null;
     }
 
     #endregion [ Extract ]
@@ -705,7 +840,7 @@ internal static class ProxyGeneratorUtils
 
                 foreach (var method in @interface.Methods)
                 {
-                    if (method.Method.ShouldGenerateMethodCache)
+                    if (method.ShouldGenerateMethodCache)
                     {
                         yield return GetMethodCacheInitialization(@interface, method);
                     }
@@ -843,13 +978,13 @@ internal static class ProxyGeneratorUtils
 
         foreach (var method in @interface.Methods)
         {
-            if (method.Method.ShouldGenerateMethodName)
+            if (method.ShouldGenerateMethodName)
             {
                 // private const string $MethodName_$MethodIndex_Name = nameof($InterfaceFullName.$MethodName);
                 yield return ParseMemberDeclaration($"private const string {method.MethodNameConstName} = nameof({@interface.Type.FullName}.{method.Method.Name});")!;
             }
 
-            if (method.Method.ShouldGenerateMethodCache)
+            if (method.ShouldGenerateMethodCache)
             {
                 // private static readonly System.Reflection.MethodInfo MyMethod_0_Cache;
                 yield return ParseMemberDeclaration($"private static readonly System.Reflection.MethodInfo {method.MethodCacheName};")!;
@@ -977,7 +1112,8 @@ internal static class ProxyGeneratorUtils
                         InvocationExpression(
                                 ParseExpression($"{proxyModel.Interceptor.ParameterName}.{afterSuccessCall.Name}"))
                             .WithArgumentList(ArgumentList(SeparatedList(
-                                GetInterceptorArguments(afterSuccessCall.Parameters, isAfterCall: true, isSuccess: true))));
+                                GetInterceptorArguments(afterSuccessCall.Parameters, isAfterCall: true,
+                                    isSuccess: true))));
 
                     yield return ExpressionStatement(afterSuccessExpression);
 
@@ -1149,18 +1285,17 @@ internal static class ProxyGeneratorUtils
 
             ExpressionSyntax GetParameterValue(ProxyInterceptorCallParameterModel parameter)
             {
-                if (parameter.InterceptedProxyType is not null)
+                if (parameter.InterceptedProxyType is {} interceptedProxyType)
                 {
-                    if (parameter.Type.FullName == "string")
+                    switch (interceptedProxyType.ReferenceKind)
                     {
-                        // ProxyType_Name
-                        return ParseExpression(@$"{proxyModel.ProxyTypeNameName}");
-                    }
+                        case TypeReferenceKind.String:
+                            // ProxyType_Name
+                            return ParseExpression(@$"{proxyModel.ProxyTypeNameName}");
 
-                    if (parameter.Type.FullName == typeof(Type).FullName)
-                    {
-                        // ProxyType_Cache
-                        return ParseExpression(@$"{proxyModel.ProxyTypeCacheName}");
+                        case TypeReferenceKind.Type:
+                            // ProxyType_Cache
+                            return ParseExpression(@$"{proxyModel.ProxyTypeCacheName}");
                     }
                 }
 
@@ -1175,33 +1310,31 @@ internal static class ProxyGeneratorUtils
                     return ParseExpression(@$"{@interface.ParameterName}");
                 }
 
-                if (parameter.InterceptedTargetType is not null)
+                if (parameter.InterceptedTargetType is { } interceptedTargetType)
                 {
-                    if (parameter.Type.FullName == "string")
+                    switch (interceptedTargetType.ReferenceKind)
                     {
-                        // $InterfaceName_TargetType_Name
-                        return ParseExpression(@$"{@interface.TargetTypeNameName}");
-                    }
+                        case TypeReferenceKind.String:
+                            // $InterfaceName_TargetType_Name
+                            return ParseExpression(@$"{@interface.TargetTypeNameName}");
 
-                    if (parameter.Type.FullName == typeof(Type).FullName)
-                    {
-                        // $InterfaceName_TargetType_Cache
-                        return ParseExpression(@$"{@interface.TargetTypeCacheName}");
+                        case TypeReferenceKind.Type:
+                            // $InterfaceName_TargetType_Cache
+                            return ParseExpression(@$"{@interface.TargetTypeCacheName}");
                     }
                 }
 
-                if (parameter.InterceptedMember is not null)
+                if (parameter.InterceptedMember is {} interceptedMember)
                 {
-                    if (parameter.Type.FullName == "System.Reflection.MethodInfo")
+                    switch (interceptedMember.ReferenceKind)
                     {
-                        // MyMethod_0_Cache
-                        return ParseExpression(@$"{method.MethodCacheName}");
-                    }
+                        case MemberReferenceKind.String:
+                            // MyMethod_0_Name
+                            return ParseExpression(@$"{method.MethodNameConstName}");
 
-                    if (parameter.Type.FullName == "string")
-                    {
-                        // MyMethod_0_Name
-                        return ParseExpression(@$"{method.MethodNameConstName}");
+                        case MemberReferenceKind.MethodInfo:
+                            // MyMethod_0_Cache
+                            return ParseExpression(@$"{method.MethodCacheName}");
                     }
                 }
 

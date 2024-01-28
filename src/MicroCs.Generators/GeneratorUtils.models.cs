@@ -38,8 +38,6 @@ internal class MethodModel : MemberBaseModel
     public IReadOnlyList<AttributeModel> Attributes { get; set; } = default!;
     public TypeModel ReturnType { get; set; } = default!;
     public IMethodSymbol Symbol { get; set; } = default!;
-    public bool ShouldGenerateMethodName => true;
-    public bool ShouldGenerateMethodCache => true;
 }
 
 internal class MethodParameterModel

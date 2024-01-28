@@ -11,8 +11,8 @@ public static class BeforeAfterAllCallSample
     {
         IProxyGeneratorInterface instance = new SampleProxyGeneratorInterface();
         var interceptors = new LoggingInterceptors();
-        // IProxyGeneratorInterface proxy = instance;
-        IProxyGeneratorInterface proxy = new LoggingProxyGeneratorClass(instance, interceptors);
+        IProxyGeneratorInterface proxy = instance;
+        //IProxyGeneratorInterface proxy = new LoggingProxyGeneratorClass(instance, interceptors);
 
         Console.WriteLine("Running MyMethod_0:");
         proxy.MyMethod();

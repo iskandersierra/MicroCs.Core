@@ -1,0 +1,14 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MC0001,
+      Title: Unexpected type on symbol,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (26,4)-(32,5),
+      MessageFormat: Unexpected type on symbol {0},
+      Message: Unexpected type on symbol System.Action*,
+      Category: MicroCs.Generators
+    }
+  ]
+}

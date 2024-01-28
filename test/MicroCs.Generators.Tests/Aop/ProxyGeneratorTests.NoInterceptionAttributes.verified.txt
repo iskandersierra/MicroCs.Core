@@ -1,0 +1,44 @@
+﻿{
+  Diagnostics: [
+    {
+      Id: MCAOP0006,
+      Title: No interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (16,38)-(16,48),
+      MessageFormat: No interception attributes,
+      Message: No interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0006,
+      Title: No interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (20,37)-(20,47),
+      MessageFormat: No interception attributes,
+      Message: No interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0006,
+      Title: No interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (24,44)-(24,54),
+      MessageFormat: No interception attributes,
+      Message: No interception attributes,
+      Category: MicroCs.Generators.Aop
+    },
+    {
+      Id: MCAOP0006,
+      Title: No interception attributes,
+      Severity: Error,
+      WarningLevel: 0,
+      Location: : (28,44)-(28,54),
+      MessageFormat: No interception attributes,
+      Message: No interception attributes,
+      Category: MicroCs.Generators.Aop
+    }
+  ]
+}

@@ -97,7 +97,8 @@ internal static partial class GeneratorUtils
     public static IReadOnlyList<AttributeModel> ExtractAttributes(
         this ISymbol symbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         return GetAttributes().ToArray();
 
@@ -105,14 +106,14 @@ internal static partial class GeneratorUtils
         {
             foreach (var attributeData in symbol.GetAttributes())
             {
-                var type = attributeData.AttributeClass?.ToNamedTypeModel();
+                var type = attributeData.AttributeClass?.ToTypeModel(context, compilation, location);
 
                 if (type is null)
                 {
                     context.ReportDiagnostic(
                         Diagnostic.Create(
                             DiagnosticDescriptors.UnexpectedTypeOnSymbol,
-                            symbol.Locations[0],
+                            symbol.Locations.FirstOrDefault() ?? location,
                             symbol.ToDisplayString()));
 
                     continue;
@@ -134,55 +135,52 @@ internal static partial class GeneratorUtils
 
     #region [ Types ]
 
-    public static TypeModel ToNamedTypeModel(
-        this INamedTypeSymbol symbol)
+    public static string? GetNamespace(
+        this INamespaceSymbol symbol)
     {
-        return new TypeModel
-        {
-            Namespace = symbol.ContainingNamespace.ToDisplayString(),
-            FullName = symbol.ToDisplayString(),
-            Name = symbol.Name,
-            Symbol = symbol,
-        };
+        return symbol.IsGlobalNamespace ? null : symbol.ToDisplayString();
     }
 
-    public static TypeModel? ToNamedTypeModel(
-        this IArrayTypeSymbol symbol,
-        SourceProductionContext context,
-        Compilation compilation)
-    {
-        var elementType = symbol.ElementType.ToNamedTypeModel(context, compilation);
-
-        if (elementType is null) return null;
-
-        return new TypeModel
-        {
-            Namespace = null,
-            FullName = symbol.ToDisplayString(),
-            Name = symbol.Name,
-            Symbol = symbol,
-        };
-    }
-
-    public static TypeModel? ToNamedTypeModel(
+    public static TypeModel? ToTypeModel(
         this ITypeSymbol symbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         switch (symbol)
         {
             case INamedTypeSymbol namedTypeSymbol:
-                return namedTypeSymbol.ToNamedTypeModel();
+            {
+                return new TypeModel
+                {
+                    Namespace = namedTypeSymbol.ContainingNamespace.GetNamespace(),
+                    FullName = namedTypeSymbol.ToDisplayString(),
+                    Name = namedTypeSymbol.Name,
+                    Symbol = namedTypeSymbol,
+                };
+            }
 
             case IArrayTypeSymbol arrayTypeSymbol:
-                return arrayTypeSymbol.ToNamedTypeModel(context, compilation);
+            {
+                var elementType = arrayTypeSymbol.ElementType.ToTypeModel(context, compilation, location);
+
+                if (elementType is null) return null;
+
+                return new TypeModel
+                {
+                    Namespace = null,
+                    FullName = arrayTypeSymbol.ToDisplayString(),
+                    Name = arrayTypeSymbol.Name,
+                    Symbol = arrayTypeSymbol,
+                };
+            }
 
             default:
                 {
                     context.ReportDiagnostic(
                         Diagnostic.Create(
                             DiagnosticDescriptors.UnexpectedTypeOnSymbol,
-                            symbol.Locations[0],
+                            symbol.Locations.FirstOrDefault() ?? location,
                             symbol.ToDisplayString()));
 
                     return null;
@@ -194,14 +192,15 @@ internal static partial class GeneratorUtils
     public static TypeWithMembersModel? ExtractTypeWithMembersModel(
         this INamedTypeSymbol type,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
-        var methods = type.ExtractMethods(context, compilation);
-        var attributes = type.ExtractAttributes(context, compilation);
+        var methods = type.ExtractMethods(context, compilation, location);
+        var attributes = type.ExtractAttributes(context, compilation, location);
 
         return new TypeWithMembersModel()
         {
-            Namespace = type.ContainingNamespace?.ToDisplayString(),
+            Namespace = type.ContainingNamespace.GetNamespace(),
             FullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             Name = type.Name,
             Methods = methods,
@@ -219,7 +218,8 @@ internal static partial class GeneratorUtils
     public static AsyncTypeInfo GetAsyncInfo(
         this ITypeSymbol typeSymbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var result = new AsyncTypeInfo();
 
@@ -241,7 +241,7 @@ internal static partial class GeneratorUtils
                   string.Equals(genericTypeFullName, Value1TaskFullName, StringComparison.Ordinal)))
         {
             result.IsAsync = true;
-            result.InnerType = namedTypeSymbol.TypeArguments[0].ToNamedTypeModel(context, compilation);
+            result.InnerType = namedTypeSymbol.TypeArguments[0].ToTypeModel(context, compilation, location);
         }
 
         return result;
@@ -254,17 +254,19 @@ internal static partial class GeneratorUtils
     public static MethodModel? ToMethodModel(
         this IMethodSymbol methodSymbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var parameters = methodSymbol.Parameters
             .Select(parameterSymbol =>
             {
                 var typeModel = parameterSymbol.Type
-                    .ToNamedTypeModel(context, compilation);
+                    .ToTypeModel(context, compilation, location);
 
                 if (typeModel is null) return null;
 
-                var attributes = parameterSymbol.ExtractAttributes(context, compilation);
+                var attributes = parameterSymbol
+                    .ExtractAttributes(context, compilation, location);
 
                 return new MethodParameterModel
                 {
@@ -278,12 +280,14 @@ internal static partial class GeneratorUtils
             .Select(p => p!)
             .ToList();
 
-        var returnType = methodSymbol.ReturnType.ToNamedTypeModel(context, compilation);
+        var returnType = methodSymbol.ReturnType
+            .ToTypeModel(context, compilation, location);
 
         if (returnType is null || parameters.Count != methodSymbol.Parameters.Length)
             return null;
 
-        var attributes = methodSymbol.ExtractAttributes(context, compilation);
+        var attributes = methodSymbol
+            .ExtractAttributes(context, compilation, location);
         
         return new MethodModel
         {
@@ -298,11 +302,12 @@ internal static partial class GeneratorUtils
     public static IReadOnlyList<MethodModel> ExtractMethods(
         this INamedTypeSymbol symbol,
         SourceProductionContext context,
-        Compilation compilation)
+        Compilation compilation,
+        Location location)
     {
         var result = symbol.GetMembers()
             .OfType<IMethodSymbol>()
-            .Select(m => m.ToMethodModel(context, compilation))
+            .Select(m => m.ToMethodModel(context, compilation, location))
             .Where(m => m is not null)
             .Select(m => m!)
             .ToList();
